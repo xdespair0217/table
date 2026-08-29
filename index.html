@@ -34,6 +34,10 @@
     button.danger { background: #5a1a1a; border-color: var(--accent-red); }
     button.danger:hover { background: #7a2424; }
 
+    /* 快速複製按鈕 */
+    .btn-copy-info { background: #102a3a; border: 1px solid var(--accent-cyan); color: var(--accent-cyan); font-weight: bold; padding: 6px 12px; border-radius: 4px; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }
+    .btn-copy-info:hover { background: var(--accent-cyan); color: #000; }
+
     /* Workspace */
     .workspace { display: flex; flex: 1; height: calc(100vh - 90px); position: relative; overflow: hidden; }
     .viewport { flex: 1; position: relative; background: #080b10; overflow: auto; display: flex; align-items: center; justify-content: center; user-select: none; }
@@ -61,17 +65,24 @@
     .hotspot:hover { transform: translate(-50%, -50%) scale(1.25); z-index: 10; }
     @keyframes pulse { 0% { transform: scale(0.6); opacity: 1; } 100% { transform: scale(1.3); opacity: 0; } }
 
-    /* Sidebar Editor (電腦端專屬) */
+    /* Sidebar Editor */
     .sidebar { width: 440px; background: var(--panel-bg); border-left: 1px solid var(--border-color); display: flex; flex-direction: column; z-index: 15; backdrop-filter: blur(10px); }
     .sidebar-header { padding: 12px 16px; border-bottom: 1px solid var(--border-color); font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
     .sidebar-content { padding: 15px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 14px; }
     .form-group { display: flex; flex-direction: column; gap: 6px; }
     .form-group label { font-size: 12px; color: var(--text-muted); font-weight: bold; }
     
-    .photo-preview-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 6px; }
-    .thumb-wrap { position: relative; width: 100%; height: 110px; border-radius: 6px; overflow: hidden; border: 1px solid var(--border-color); cursor: pointer; }
+    /* 縮圖展示與檔名標註 */
+    .photo-preview-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 6px; }
+    .thumb-card { display: flex; flex-direction: column; background: #121924; border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden; }
+    .thumb-wrap { position: relative; width: 100%; height: 110px; cursor: pointer; background: #000; }
     .thumb-wrap img { width: 100%; height: 100%; object-fit: cover; }
-    .thumb-wrap .del-btn { position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.8); color: #fff; border: none; border-radius: 50%; width: 22px; height: 22px; font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 2; }
+    .thumb-filename { font-size: 11px; color: var(--accent-cyan); padding: 4px 6px; font-family: monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; background: #0c121c; border-top: 1px solid var(--border-color); }
+
+    .thumb-btn-group { position: absolute; top: 4px; right: 4px; display: flex; gap: 4px; z-index: 3; }
+    .thumb-btn { background: rgba(15, 23, 36, 0.85); color: #fff; border: 1px solid var(--border-color); border-radius: 4px; width: 24px; height: 24px; font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); transition: all 0.2s; }
+    .thumb-btn:hover { background: var(--accent-cyan); color: #000; }
+    .thumb-btn.del:hover { background: var(--accent-red); color: #fff; }
 
     /* 外連排版 */
     .ext-link-card { background: #121924; border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; display: flex; flex-direction: column; gap: 6px; }
@@ -88,6 +99,7 @@
     .slider-nav-btn.prev { left: 8px; }
     .slider-nav-btn.next { right: 8px; }
     .slider-counter { position: absolute; bottom: 8px; right: 10px; background: rgba(0,0,0,0.7); color: #fff; font-size: 11px; padding: 2px 8px; border-radius: 10px; z-index: 3; }
+    .slider-filename-tag { position: absolute; top: 8px; left: 10px; background: rgba(0,0,0,0.75); color: var(--accent-cyan); font-family: monospace; font-size: 11px; padding: 2px 8px; border-radius: 4px; z-index: 3; border: 1px solid rgba(0,210,255,0.3); }
 
     .hover-card .stock-tag { display: inline-block; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; background: #004d40; color: #a7ffeb; margin-bottom: 8px; }
     .hover-card .stock-tag.out { background: #5a1a1a; color: #ff8a80; }
@@ -111,11 +123,12 @@
 
     /* Lightbox Modal */
     .lightbox-modal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.95); z-index: 999; justify-content: center; align-items: center; }
-    .lightbox-modal img { max-width: 96vw; max-height: 90vh; border-radius: 8px; box-shadow: 0 0 45px rgba(0,210,255,0.4); object-fit: contain; }
+    .lightbox-modal img { max-width: 96vw; max-height: 88vh; border-radius: 8px; box-shadow: 0 0 45px rgba(0,210,255,0.4); object-fit: contain; }
     .lightbox-btn { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(20,30,45,0.85); color: #fff; border: 1px solid var(--border-color); font-size: 24px; width: 48px; height: 48px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 1000; }
     .lightbox-btn.prev { left: 16px; }
     .lightbox-btn.next { right: 16px; }
     .lightbox-close { position: absolute; top: 16px; right: 20px; font-size: 30px; color: #fff; cursor: pointer; background: transparent; border: none; z-index: 1000; }
+    .lightbox-header-tag { position: absolute; top: 20px; left: 24px; font-family: monospace; font-size: 14px; background: rgba(0,0,0,0.8); color: var(--accent-cyan); padding: 4px 14px; border-radius: 6px; border: 1px solid var(--border-color); }
     .lightbox-counter { position: absolute; bottom: 20px; font-size: 13px; background: rgba(0,0,0,0.7); color: #00d2ff; padding: 4px 12px; border-radius: 20px; }
 
     /* RWD 手機版 */
@@ -170,7 +183,6 @@
 
   <header>
     <div class="nav-selectors">
-      <!-- 廠牌選單 -->
       <select id="brandSelect" onchange="switchBrand()"></select>
       <div class="btn-group desktop-admin-only">
         <button onclick="renameBrand()">✏️ 改名</button>
@@ -178,7 +190,6 @@
         <button class="danger" onclick="deleteBrand()">🗑️</button>
       </div>
       
-      <!-- 車型選單 -->
       <select id="modelSelect" onchange="switchModel()"></select>
       <div class="btn-group desktop-admin-only">
         <button onclick="renameModel()">✏️ 改名</button>
@@ -187,10 +198,10 @@
       </div>
     </div>
 
-    <!-- 電腦端管理工具列 -->
     <div class="desktop-admin-only" style="display:flex; align-items:center; gap:6px;">
       <span id="syncStatus" style="font-size: 12px; color: var(--accent-cyan); font-weight:bold;">● 讀取中...</span>
-      <button class="primary" onclick="document.getElementById('inventoryFileInput').click()">📂 載入庫存表</button>
+      <button class="primary" onclick="syncCloudNow()">🔄 立即同步雲端</button>
+      <button onclick="document.getElementById('inventoryFileInput').click()">📂 載入本機表</button>
       <input type="file" id="inventoryFileInput" accept=".xlsx, .xls, .csv" style="display:none" onchange="loadLocalInventoryFile(event)">
       <button onclick="exportData()">💾 匯出 (data01.json)</button>
       <button onclick="document.getElementById('importFile').click()">📂 匯入</button>
@@ -204,7 +215,6 @@
   <div class="workspace">
     <div class="viewport" id="viewport">
       
-      <!-- 畫布懸浮操作列 -->
       <div class="canvas-toolbar desktop-admin-only" id="canvasToolbar" style="display:none;">
         <button id="addHotspotModeBtn" class="mode-btn" onclick="toggleAddHotspotMode()">📍 新增熱點標記 (點擊啟用)</button>
         <button onclick="document.getElementById('baseImgInput').click()">🔄 更換底圖</button>
@@ -225,15 +235,21 @@
     <div class="hover-card" id="hoverCard" onmouseenter="cancelCardHide()" onmouseleave="hideHoverCard()">
       <button class="card-close-btn" onclick="hideHoverCard(true)">✕</button>
       <div class="hover-slider-wrap" id="hoverSliderWrap" style="display:none;">
+        <div class="slider-filename-tag" id="cardPhotoFileName">--</div>
         <img id="cardImg" src="" onclick="openLightboxFromCard()">
         <button class="slider-nav-btn prev" onclick="prevCardPhoto(event)">◀</button>
         <button class="slider-nav-btn next" onclick="nextCardPhoto(event)">▶</button>
         <div class="slider-counter" id="cardPhotoCounter">1 / 1</div>
       </div>
-      <div>
-        <div id="cardStockTag" class="stock-tag">庫存充足</div>
-        <div id="cardCategoryBadge" class="category-badge badge-red">銷售估價</div>
+      
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <div>
+          <div id="cardStockTag" class="stock-tag">庫存充足</div>
+          <div id="cardCategoryBadge" class="category-badge badge-red">銷售估價</div>
+        </div>
+        <button class="btn-copy-info" onclick="copyPurePartInfo()">📋 複製報價訊息</button>
       </div>
+
       <h3 id="cardPartName" style="margin-bottom: 6px; color: var(--accent-cyan); font-size: 18px;">零件名稱</h3>
       <div class="hover-row"><span class="label">零件料號:</span><span id="cardPartNo" style="font-family: monospace; font-size:15px; font-weight:bold;">--</span></div>
       <div class="hover-row"><span class="label">層架儲位:</span><span id="cardRack" style="color:#ffd54f; font-weight:bold; font-size:15px;">--</span></div>
@@ -253,6 +269,7 @@
       <div class="sidebar-header">
         <span id="editorTitle">零件熱點編輯</span>
         <div style="display:flex; gap:6px;">
+          <button class="btn-copy-info" onclick="copyPurePartInfo()" style="font-size:12px; padding:4px 8px;">📋 複製訊息</button>
           <button class="danger" id="deleteHotspotBtn" onclick="deleteCurrentHotspot()" style="display:none;">刪除熱點</button>
           <button onclick="deselectHotspot()" style="display:none;" id="sidebarCloseBtn">✕ 關閉</button>
         </div>
@@ -287,9 +304,10 @@
           <textarea id="inputNotes" rows="3" style="background:#1a2332; border:1px solid var(--border-color); color:#fff; border-radius:4px; padding:8px; font-size:13px;"></textarea>
         </div>
         <div class="form-group">
-          <label>特寫細節照片 (點擊任一張可全螢幕切換瀏覽)</label>
+          <label>特寫細節照片 (縮圖下方標註原始檔名)</label>
           <button onclick="document.getElementById('photoInput').click()">➕ 新增特寫照片</button>
           <input type="file" id="photoInput" accept="image/*" multiple style="display:none" onchange="uploadDetailPhotos(event)">
+          <input type="file" id="replacePhotoInput" accept="image/*" style="display:none" onchange="executePhotoReplace(event)">
           <div class="photo-preview-grid" id="photoGrid"></div>
         </div>
 
@@ -326,6 +344,7 @@
 
   <!-- Lightbox Modal -->
   <div class="lightbox-modal" id="lightboxModal">
+    <div class="lightbox-header-tag" id="lightboxFileName">檔案名稱</div>
     <button class="lightbox-close" onclick="closeLightbox()">✕</button>
     <button class="lightbox-btn prev" onclick="prevLightboxPhoto()">◀</button>
     <img id="lightboxImg" src="">
@@ -353,6 +372,33 @@
         alert("❌ 密碼錯誤，操作已取消！");
         return false;
       }
+    }
+
+    function copyPurePartInfo() {
+      const target = selectedHotspot || hoverHotspot;
+      if (!target) return;
+
+      const cleanKey = (target.partNo || '').trim().replace(/^0+/, '');
+      const inv = inventoryDB[target.partNo] || inventoryDB[cleanKey] || {};
+
+      const partNo = target.partNo || '未填寫';
+      const partName = target.partName || inv.name || '未命名零件';
+      const rack = inv.rack || '--';
+      const price = inv.price ? `$${inv.price}` : '--';
+
+      const textToCopy = `【零件報價資訊】\n零件料號：${partNo}\n零件名稱：${partName}\n層架儲位：${rack}\n建議售價：${price}`;
+
+      navigator.clipboard.writeText(textToCopy).then(() => {
+        alert(`✅ 已複製零件訊息至剪貼簿！\n\n${textToCopy}`);
+      }).catch(() => {
+        const textarea = document.createElement('textarea');
+        textarea.value = textToCopy;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        alert(`✅ 已複製零件訊息至剪貼簿！\n\n${textToCopy}`);
+      });
     }
 
     const DB_NAME = "AutoInspectionDB_v2";
@@ -449,6 +495,7 @@
     let selectedHotspot = null;
 
     let isAddingHotspotMode = false;
+    let replacingPhotoIndex = -1;
 
     let activePhotos = [];
     let currentPhotoIdx = 0;
@@ -513,7 +560,65 @@
       return p;
     }
 
-    // 自動讀取 data02.xlsx 檔案
+    // 第一優先：直接讀取 Google 雲端 CSV (永遠確保最新報價)
+    async function autoFetchCloudCSV() {
+      const statusEl = document.getElementById('syncStatus');
+      try {
+        if (statusEl) statusEl.innerText = "● 正在同步雲端報價...";
+        
+        let text = "";
+        try {
+          const res = await fetch(CSV_URL);
+          if (!res.ok) throw new Error("Fetch failed");
+          text = await res.text();
+        } catch (e) {
+          const proxyRes = await fetch("https://api.allorigins.win/raw?url=" + encodeURIComponent(CSV_URL));
+          text = await proxyRes.text();
+        }
+
+        const rows = parseCSV(text);
+        let headerRow = 17;
+        for (let i = 0; i < Math.min(25, rows.length); i++) {
+          if (rows[i].some(col => (col || '').includes('零件代號'))) {
+            headerRow = i;
+            break;
+          }
+        }
+
+        inventoryDB = {};
+        for (let i = headerRow + 1; i < rows.length; i++) {
+          const row = rows[i];
+          if (!row || row.length < 7) continue;
+          const rawPartNo = (row[3] || '').trim();
+          if (!rawPartNo) continue;
+
+          const item = {
+            rawPartNo: rawPartNo,
+            name: (row[4] || '').trim(),
+            spec: (row[5] || '').trim(),
+            rack: (row[6] || '').trim() || '未設定',
+            qty: parseInt(row[9]) || 0,
+            price: (row[22] || '0').trim()
+          };
+          const cleanKey = rawPartNo.replace(/^0+/, '');
+          inventoryDB[rawPartNo] = item;
+          inventoryDB[cleanKey] = item;
+        }
+
+        await dbSet('inventory_db', inventoryDB);
+        const count = getUniqueInventoryCount();
+        if (statusEl) {
+          statusEl.innerText = `● 雲端報價同步完成 (${count} 筆)`;
+          statusEl.style.color = "var(--accent-green)";
+        }
+        if (selectedHotspot) matchInventory();
+        return true;
+      } catch (err) {
+        return false;
+      }
+    }
+
+    // 第二優先備援：讀取同目錄 data02.xlsx
     async function autoFetchLocalExcel() {
       try {
         const res = await fetch(INVENTORY_EXCEL_FILE);
@@ -557,7 +662,7 @@
         const count = getUniqueInventoryCount();
         const statusEl = document.getElementById('syncStatus');
         if (statusEl) {
-          statusEl.innerText = `● data02.xlsx 已連線 (${count} 筆)`;
+          statusEl.innerText = `● data02.xlsx 連線 (${count} 筆)`;
           statusEl.style.color = "var(--accent-green)";
         }
         if (selectedHotspot) matchInventory();
@@ -567,61 +672,15 @@
       }
     }
 
-    // 自動同步 Google 雲端試算表庫存 (備援)
-    async function autoFetchCloudCSV() {
-      const statusEl = document.getElementById('syncStatus');
-      try {
-        let text = "";
-        try {
-          const res = await fetch(CSV_URL);
-          text = await res.text();
-        } catch (e) {
-          const proxyRes = await fetch("https://api.allorigins.win/raw?url=" + encodeURIComponent(CSV_URL));
-          text = await proxyRes.text();
-        }
-
-        const rows = parseCSV(text);
-        let headerRow = 17;
-        for (let i = 0; i < Math.min(25, rows.length); i++) {
-          if (rows[i].some(col => (col || '').includes('零件代號'))) {
-            headerRow = i;
-            break;
-          }
-        }
-
-        inventoryDB = {};
-        for (let i = headerRow + 1; i < rows.length; i++) {
-          const row = rows[i];
-          if (!row || row.length < 7) continue;
-          const rawPartNo = (row[3] || '').trim();
-          if (!rawPartNo) continue;
-
-          const item = {
-            rawPartNo: rawPartNo,
-            name: (row[4] || '').trim(),
-            spec: (row[5] || '').trim(),
-            rack: (row[6] || '').trim() || '未設定',
-            qty: parseInt(row[9]) || 0,
-            price: (row[22] || '0').trim()
-          };
-          const cleanKey = rawPartNo.replace(/^0+/, '');
-          inventoryDB[rawPartNo] = item;
-          inventoryDB[cleanKey] = item;
-        }
-
-        await dbSet('inventory_db', inventoryDB);
-        const count = getUniqueInventoryCount();
-        if (statusEl) {
-          statusEl.innerText = `● 雲端庫存已連線 (${count} 筆)`;
-          statusEl.style.color = "var(--accent-green)";
-        }
-        if (selectedHotspot) matchInventory();
-      } catch (err) {
-        // 失敗時不動作
+    async function syncCloudNow() {
+      const ok = await autoFetchCloudCSV();
+      if (ok) {
+        alert("✅ 雲端報價與庫存表同步完成！");
+      } else {
+        alert("⚠️ 雲端連線異常，請檢查網路連線或發布設定。");
       }
     }
 
-    // 手動載入本機 Excel 檔案
     function loadLocalInventoryFile(e) {
       const file = e.target.files[0];
       if (!file) return;
@@ -670,7 +729,7 @@
 
           await dbSet('inventory_db', inventoryDB);
           const count = getUniqueInventoryCount();
-          statusEl.innerText = `● 庫存已永久記憶 (${count} 筆)`;
+          statusEl.innerText = `● 本機庫存已覆蓋 (${count} 筆)`;
           statusEl.style.color = "var(--accent-green)";
 
           if (selectedHotspot) matchInventory();
@@ -686,7 +745,7 @@
       await openDB();
       const statusEl = document.getElementById('syncStatus');
 
-      // 1. 底圖與熱點資料載入
+      // 1. 底圖與熱點資料載入 (優先讀取 data01.json)
       let loadedFromServer = false;
       try {
         const res = await fetch(DATA_JSON_FILE);
@@ -710,20 +769,21 @@
         }
       }
 
-      // 2. 庫存資料載入：優先讀取已儲存的 IndexedDB 快取（防重整被沖掉）
-      const savedInv = await dbGet('inventory_db');
-      if (savedInv && Object.keys(savedInv).length > 0) {
-        inventoryDB = savedInv;
-        const count = getUniqueInventoryCount();
-        if (statusEl) {
-          statusEl.innerText = `● 庫存記憶已就緒 (${count} 筆)`;
-          statusEl.style.color = "var(--accent-green)";
-        }
-      } else {
-        // 若記憶庫是空的，才執行自動抓取 data02.xlsx 或雲端
+      // 2. 報價庫存載入：永遠第一優先讀取 Google 雲端 CSV
+      const cloudLoaded = await autoFetchCloudCSV();
+      if (!cloudLoaded) {
+        // 斷網備援 1：讀取本地 data02.xlsx
         const excelLoaded = await autoFetchLocalExcel();
         if (!excelLoaded) {
-          await autoFetchCloudCSV();
+          // 斷網備援 2：讀取瀏覽器上次記憶庫
+          const savedInv = await dbGet('inventory_db');
+          if (savedInv && Object.keys(savedInv).length > 0) {
+            inventoryDB = savedInv;
+            if (statusEl) {
+              statusEl.innerText = `● 離線快取已就緒 (${getUniqueInventoryCount()} 筆)`;
+              statusEl.style.color = "var(--accent-green)";
+            }
+          }
         }
       }
 
@@ -1081,24 +1141,68 @@
       files.forEach(f => {
         const r = new FileReader();
         r.onload = (evt) => {
-          selectedHotspot.photos.push(evt.target.result);
+          selectedHotspot.photos.push({
+            src: evt.target.result,
+            name: f.name
+          });
           autoSave();
           renderPhotoGrid();
         };
         r.readAsDataURL(f);
       });
+      e.target.value = '';
+    }
+
+    function triggerReplacePhoto(i) {
+      replacingPhotoIndex = i;
+      document.getElementById('replacePhotoInput').click();
+    }
+
+    function executePhotoReplace(e) {
+      const file = e.target.files[0];
+      if (file && replacingPhotoIndex >= 0 && selectedHotspot) {
+        const r = new FileReader();
+        r.onload = (evt) => {
+          selectedHotspot.photos[replacingPhotoIndex] = {
+            src: evt.target.result,
+            name: file.name
+          };
+          autoSave();
+          renderPhotoGrid();
+          replacingPhotoIndex = -1;
+        };
+        r.readAsDataURL(file);
+      }
+      e.target.value = '';
+    }
+
+    function getPhotoData(p) {
+      if (typeof p === 'string') {
+        return { src: p, name: '未命名圖片.jpg' };
+      }
+      return p;
     }
 
     function renderPhotoGrid() {
       const grid = document.getElementById('photoGrid');
-      grid.innerHTML = selectedHotspot.photos.map((p, i) => `
-        <div class="thumb-wrap" onclick="openLightbox(${i})">
-          <img src="${p}">
-          <button class="del-btn" onclick="event.stopPropagation(); removePhoto(${i})">✕</button>
-        </div>
-      `).join('');
+      grid.innerHTML = selectedHotspot.photos.map((p, i) => {
+        const photo = getPhotoData(p);
+        return `
+          <div class="thumb-card">
+            <div class="thumb-wrap" onclick="openLightbox(${i})">
+              <img src="${photo.src}">
+              <div class="thumb-btn-group">
+                <button class="thumb-btn" title="原地替換這張照片" onclick="event.stopPropagation(); triggerReplacePhoto(${i})">🔄</button>
+                <button class="thumb-btn del" title="刪除這張照片" onclick="event.stopPropagation(); removePhoto(${i})">✕</button>
+              </div>
+            </div>
+            <div class="thumb-filename" title="${photo.name}">${photo.name}</div>
+          </div>
+        `;
+      }).join('');
     }
 
+    // --- Lightbox Functions ---
     function openLightbox(idx) {
       activePhotos = selectedHotspot ? selectedHotspot.photos : (hoverHotspot ? hoverHotspot.photos : []);
       if (!activePhotos || activePhotos.length === 0) return;
@@ -1114,7 +1218,9 @@
     }
 
     function updateLightboxView() {
-      document.getElementById('lightboxImg').src = activePhotos[currentPhotoIdx];
+      const photo = getPhotoData(activePhotos[currentPhotoIdx]);
+      document.getElementById('lightboxImg').src = photo.src;
+      document.getElementById('lightboxFileName').innerText = `📄 ${photo.name}`;
       document.getElementById('lightboxCounter').innerText = `第 ${currentPhotoIdx + 1} / ${activePhotos.length} 張`;
     }
 
@@ -1252,7 +1358,9 @@
       const wrap = document.getElementById('hoverSliderWrap');
       if (hoverHotspot && hoverHotspot.photos && hoverHotspot.photos.length > 0) {
         wrap.style.display = 'block';
-        document.getElementById('cardImg').src = hoverHotspot.photos[hoverPhotoIdx];
+        const photo = getPhotoData(hoverHotspot.photos[hoverPhotoIdx]);
+        document.getElementById('cardImg').src = photo.src;
+        document.getElementById('cardPhotoFileName').innerText = photo.name;
         document.getElementById('cardPhotoCounter').innerText = `${hoverPhotoIdx + 1} / ${hoverHotspot.photos.length}`;
       } else {
         wrap.style.display = 'none';
