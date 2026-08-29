@@ -23,8 +23,9 @@
 
     /* Header */
     header { background: #141c28; border-bottom: 1px solid var(--border-color); padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; z-index: 10; }
-    .nav-selectors { display: flex; gap: 10px; align-items: center; }
-    select, input, button { background: #1a2332; border: 1px solid var(--border-color); color: var(--text-main); padding: 6px 12px; border-radius: 4px; font-size: 14px; outline: none; }
+    .nav-selectors { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .btn-group { display: inline-flex; gap: 4px; align-items: center; }
+    select, input, button { background: #1a2332; border: 1px solid var(--border-color); color: var(--text-main); padding: 6px 10px; border-radius: 4px; font-size: 13px; outline: none; }
     select:focus, input:focus { border-color: var(--accent-cyan); }
     button { cursor: pointer; transition: all 0.2s; }
     button:hover { background: #26354a; border-color: var(--accent-cyan); }
@@ -123,14 +124,25 @@
 
   <header>
     <div class="nav-selectors">
+      <!-- 廠牌操作區 -->
       <label>廠牌:</label>
       <select id="brandSelect" onchange="switchBrand()"></select>
-      <button onclick="addBrand()">➕ 廠牌</button>
+      <div class="btn-group">
+        <button onclick="renameBrand()" title="修改當前廠牌名稱">✏️ 改名</button>
+        <button onclick="addBrand()" title="新增廠牌">➕ 廠牌</button>
+        <button class="danger" onclick="deleteBrand()" title="刪除當前廠牌">🗑️</button>
+      </div>
       
-      <label style="margin-left: 8px;">車型:</label>
+      <!-- 車型操作區 -->
+      <label style="margin-left: 6px;">車型:</label>
       <select id="modelSelect" onchange="switchModel()"></select>
-      <button onclick="addModel()">➕ 車型</button>
+      <div class="btn-group">
+        <button onclick="renameModel()" title="修改當前車型名稱">✏️ 改名</button>
+        <button onclick="addModel()" title="新增車型">➕ 車型</button>
+        <button class="danger" onclick="deleteModel()" title="刪除當前車型">🗑️</button>
+      </div>
     </div>
+
     <div style="display:flex; align-items:center; gap:8px;">
       <span id="syncStatus" style="font-size: 13px; color: var(--accent-cyan); font-weight:bold;">● 讀取記憶庫中...</span>
       <button class="primary" onclick="document.getElementById('inventoryFileInput').click()">📂 載入/更新庫存表</button>
@@ -271,7 +283,7 @@
   </div>
 
   <script>
-    const ADMIN_PIN = "0000"; // 預設管理員刪除密碼
+    const ADMIN_PIN = "0000";
 
     function verifyAdminPIN(actionName) {
       const input = prompt(`【管理員安全驗證】\n請輸入 4 位數密碼以執行「${actionName}」:`);
@@ -532,7 +544,7 @@
       const container = document.getElementById('viewTabsContainer');
       const views = appData.brands[curBrandIdx].models[curModelIdx].views;
       container.innerHTML = views.map((v, i) => `
-        <div class="tab ${i === curViewIdx ? 'active' : ''}" onclick="switchView(${i})">
+        <div class="tab ${i === curViewIdx ? 'active' : ''}" onclick="switchView(${i})" ondblclick="renameView(${i})" title="雙擊可修改名稱">
           <span>${v.name}</span>
           ${views.length > 1 ? `<span class="tab-del-btn" onclick="event.stopPropagation(); deleteView(${i})">✕</span>` : ''}
         </div>
@@ -543,30 +555,93 @@
     function switchModel() { curModelIdx = parseInt(document.getElementById('modelSelect').value); curViewIdx = 0; renderTabs(); loadCurrentView(); }
     function switchView(i) { curViewIdx = i; renderTabs(); loadCurrentView(); }
 
+    // --- 廠牌修改 / 新增 / 刪除 ---
+    function renameBrand() {
+      const curBrand = appData.brands[curBrandIdx];
+      const newName = prompt(`請輸入「${curBrand.name}」的新廠牌名稱:`, curBrand.name);
+      if (newName && newName.trim() && newName.trim() !== curBrand.name) {
+        curBrand.name = newName.trim();
+        autoSave();
+        renderBrandSelect();
+      }
+    }
+
     function addBrand() {
       const name = prompt("請輸入新廠牌名稱:");
-      if (name) { 
-        appData.brands.push({ name, models: [{ name: "預設車型", views: [{ name: "引擎室全景", baseImg: "", hotspots: [] }] }] }); 
+      if (name && name.trim()) { 
+        appData.brands.push({ name: name.trim(), models: [{ name: "預設車型", views: [{ name: "引擎室全景", baseImg: "", hotspots: [] }] }] }); 
         curBrandIdx = appData.brands.length - 1; curModelIdx = 0; curViewIdx = 0; 
         autoSave();
         renderBrandSelect(); renderModelSelect(); renderTabs(); loadCurrentView(); 
       }
     }
 
+    function deleteBrand() {
+      if (appData.brands.length <= 1) {
+        alert("至少需保留一個廠牌！");
+        return;
+      }
+      const brandName = appData.brands[curBrandIdx].name;
+      if (!verifyAdminPIN(`刪除「${brandName}」廠牌及其所有車型`)) return;
+      appData.brands.splice(curBrandIdx, 1);
+      curBrandIdx = Math.max(0, curBrandIdx - 1);
+      curModelIdx = 0;
+      curViewIdx = 0;
+      autoSave();
+      renderBrandSelect(); renderModelSelect(); renderTabs(); loadCurrentView();
+    }
+
+    // --- 車型修改 / 新增 / 刪除 ---
+    function renameModel() {
+      const curModel = appData.brands[curBrandIdx].models[curModelIdx];
+      const newName = prompt(`請輸入「${curModel.name}」的新車型名稱:`, curModel.name);
+      if (newName && newName.trim() && newName.trim() !== curModel.name) {
+        curModel.name = newName.trim();
+        autoSave();
+        renderModelSelect();
+      }
+    }
+
     function addModel() {
       const name = prompt("請輸入新車型名稱:");
-      if (name) { 
-        appData.brands[curBrandIdx].models.push({ name, views: [{ name: "引擎室全景", baseImg: "", hotspots: [] }] }); 
+      if (name && name.trim()) { 
+        appData.brands[curBrandIdx].models.push({ name: name.trim(), views: [{ name: "引擎室全景", baseImg: "", hotspots: [] }] }); 
         curModelIdx = appData.brands[curBrandIdx].models.length - 1; curViewIdx = 0; 
         autoSave();
         renderModelSelect(); renderTabs(); loadCurrentView(); 
       }
     }
 
+    function deleteModel() {
+      const models = appData.brands[curBrandIdx].models;
+      if (models.length <= 1) {
+        alert("此廠牌底下至少需保留一個車型！");
+        return;
+      }
+      const modelName = models[curModelIdx].name;
+      if (!verifyAdminPIN(`刪除「${modelName}」車型及其所有部位視角`)) return;
+      models.splice(curModelIdx, 1);
+      curModelIdx = Math.max(0, curModelIdx - 1);
+      curViewIdx = 0;
+      autoSave();
+      renderModelSelect(); renderTabs(); loadCurrentView();
+    }
+
+    // --- 視角修改 / 新增 / 刪除 ---
+    function renameView(i) {
+      const view = appData.brands[curBrandIdx].models[curModelIdx].views[i];
+      const newName = prompt(`請輸入「${view.name}」部位視角的新名稱:`, view.name);
+      if (newName && newName.trim() && newName.trim() !== view.name) {
+        view.name = newName.trim();
+        autoSave();
+        renderTabs();
+      }
+    }
+
     function addView() {
       const name = prompt("請輸入部位視角名稱 (如: 後底盤與電控):");
-      if (name) { 
-        appData.brands[curBrandIdx].models[curModelIdx].views.push({ name, baseImg: "", hotspots: [] }); 
+      if (name && name.trim()) { 
+        appData.brands[curBrandIdx].models[curModelIdx].views.push({ name: name.trim(), baseImg: "", hotspots: [] }); 
         curViewIdx = appData.brands[curBrandIdx].models[curModelIdx].views.length - 1; 
         autoSave();
         renderTabs(); loadCurrentView(); 
