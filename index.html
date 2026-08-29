@@ -80,10 +80,10 @@
     .ext-link-row input { flex: 1; }
     .ext-test-btn { background: #1e2c3f; border: 1px solid var(--accent-cyan); color: var(--accent-cyan); padding: 6px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; }
 
-    /* Hover Inspection Card (電腦端為浮動卡片，手機端為底部抽屜) */
+    /* Hover Inspection Card */
     .hover-card { position: absolute; background: rgba(13, 20, 32, 0.98); border: 1.5px solid var(--accent-cyan); border-radius: 12px; padding: 16px; width: 480px; pointer-events: auto; z-index: 50; display: none; backdrop-filter: blur(14px); box-shadow: 0 20px 45px rgba(0,0,0,0.8); }
     .hover-slider-wrap { position: relative; width: 100%; height: 280px; border-radius: 8px; overflow: hidden; margin-bottom: 12px; border: 1px solid var(--border-color); background: #000; }
-    .hover-slider-wrap img { width: 100%; height: 100%; object-fit: contain; }
+    .hover-slider-wrap img { width: 100%; height: 100%; object-fit: contain; cursor: pointer; }
     .slider-nav-btn { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.65); color: #fff; border: none; font-size: 18px; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 3; }
     .slider-nav-btn.prev { left: 8px; }
     .slider-nav-btn.next { right: 8px; }
@@ -118,11 +118,8 @@
     .lightbox-close { position: absolute; top: 16px; right: 20px; font-size: 30px; color: #fff; cursor: pointer; background: transparent; border: none; z-index: 1000; }
     .lightbox-counter { position: absolute; bottom: 20px; font-size: 13px; background: rgba(0,0,0,0.7); color: #00d2ff; padding: 4px 12px; border-radius: 20px; }
 
-    /* ========================================================
-       📱 手機專屬純瀏覽模式 (Mobile Pure Viewer Mode)
-       ======================================================== */
+    /* RWD 手機版 */
     @media (max-width: 768px) {
-      /* 隱藏所有編輯與管理按鈕 */
       .desktop-admin-only,
       .btn-group,
       .canvas-toolbar,
@@ -132,20 +129,16 @@
         display: none !important;
       }
 
-      /* 頂部極簡導航 */
       header { padding: 8px 12px; justify-content: flex-start; gap: 10px; background: #0f141c; }
       .nav-selectors { width: 100%; display: flex; justify-content: space-between; }
       .nav-selectors select { font-size: 14px; padding: 8px 12px; flex: 1; font-weight: bold; background: #162232; }
 
-      /* 部位標籤優化 */
       .view-tabs { padding: 6px 12px; background: #0a0d14; }
       .tab { font-size: 13px; padding: 6px 12px; }
 
-      /* 底圖滿版 */
       .workspace { height: calc(100vh - 100px); height: calc(100dvh - 100px); }
       .base-img { max-height: calc(100vh - 130px); max-height: calc(100dvh - 130px); }
 
-      /* 底部滑出抽屜 (Bottom Sheet) */
       .hover-card { 
         position: fixed; 
         bottom: 0; 
@@ -194,12 +187,12 @@
       </div>
     </div>
 
-    <!-- 電腦端管理工具列 (手機端自動完全隱藏) -->
+    <!-- 電腦端管理工具列 -->
     <div class="desktop-admin-only" style="display:flex; align-items:center; gap:6px;">
       <span id="syncStatus" style="font-size: 12px; color: var(--accent-cyan); font-weight:bold;">● 讀取中...</span>
       <button class="primary" onclick="document.getElementById('inventoryFileInput').click()">📂 載入庫存表</button>
       <input type="file" id="inventoryFileInput" accept=".xlsx, .xls, .csv" style="display:none" onchange="loadLocalInventoryFile(event)">
-      <button onclick="exportData()">💾 匯出</button>
+      <button onclick="exportData()">💾 匯出 (data01.json)</button>
       <button onclick="document.getElementById('importFile').click()">📂 匯入</button>
       <input type="file" id="importFile" style="display:none" onchange="importData(event)">
       <button class="danger" onclick="clearAllData()" style="font-size:12px;">🗑️ 重置</button>
@@ -211,7 +204,7 @@
   <div class="workspace">
     <div class="viewport" id="viewport">
       
-      <!-- 畫布懸浮操作列 (電腦端專屬) -->
+      <!-- 畫布懸浮操作列 -->
       <div class="canvas-toolbar desktop-admin-only" id="canvasToolbar" style="display:none;">
         <button id="addHotspotModeBtn" class="mode-btn" onclick="toggleAddHotspotMode()">📍 新增熱點標記 (點擊啟用)</button>
         <button onclick="document.getElementById('baseImgInput').click()">🔄 更換底圖</button>
@@ -228,9 +221,9 @@
       <input type="file" id="baseImgInput" accept="image/*" style="display:none" onchange="uploadBaseImage(event)">
     </div>
 
-    <!-- 零件資訊卡 (電腦懸停 / 手機底部抽屜) -->
-    <div class="hover-card" id="hoverCard">
-      <button class="card-close-btn" onclick="hideHoverCard()">✕</button>
+    <!-- 零件資訊卡 -->
+    <div class="hover-card" id="hoverCard" onmouseenter="cancelCardHide()" onmouseleave="hideHoverCard()">
+      <button class="card-close-btn" onclick="hideHoverCard(true)">✕</button>
       <div class="hover-slider-wrap" id="hoverSliderWrap" style="display:none;">
         <img id="cardImg" src="" onclick="openLightboxFromCard()">
         <button class="slider-nav-btn prev" onclick="prevCardPhoto(event)">◀</button>
@@ -255,7 +248,7 @@
       </div>
     </div>
 
-    <!-- Sidebar Editor (電腦端專屬管理編輯欄) -->
+    <!-- Sidebar Editor -->
     <div class="sidebar desktop-admin-only" id="sidebar">
       <div class="sidebar-header">
         <span id="editorTitle">零件熱點編輯</span>
@@ -341,8 +334,12 @@
   </div>
 
   <script>
-    const ADMIN_PIN = "0000";
+    // 指定檔名常數
+    const DATA_JSON_FILE = "data01.json";
+    const INVENTORY_EXCEL_FILE = "data02.xlsx";
     const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQe7p6Eh_TNUQMJjwaerFPf-V3ihBDJ2UKrzdPehSlXYi5CjQCCiWeTQ6co0QQR2pkMpPPYN7Fw9cjO/pub?gid=453721344&single=true&output=csv";
+
+    const ADMIN_PIN = "0000";
 
     function isMobile() {
       return window.innerWidth <= 768;
@@ -459,6 +456,7 @@
 
     let hoverHotspot = null;
     let hoverPhotoIdx = 0;
+    let hoverHideTimer = null;
 
     async function autoSave() {
       if (!db) return;
@@ -516,7 +514,62 @@
       return p;
     }
 
-    async function autoFetchInventory() {
+    // 自動讀取 data02.xlsx 檔案
+    async function autoFetchLocalExcel() {
+      try {
+        const res = await fetch(INVENTORY_EXCEL_FILE);
+        if (!res.ok) throw new Error("No local excel");
+        const arrayBuf = await res.arrayBuffer();
+        const data = new Uint8Array(arrayBuf);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+        let headerRow = 17;
+        for (let i = 0; i < Math.min(25, rows.length); i++) {
+          if (rows[i] && rows[i].some(col => String(col).includes('零件代號'))) {
+            headerRow = i;
+            break;
+          }
+        }
+
+        inventoryDB = {};
+        for (let i = headerRow + 1; i < rows.length; i++) {
+          const row = rows[i];
+          if (!row || row.length < 7) continue;
+          const rawPartNo = String(row[3] || '').trim();
+          if (!rawPartNo) continue;
+
+          const item = {
+            rawPartNo: rawPartNo,
+            name: String(row[4] || '').trim(),
+            spec: String(row[5] || '').trim(),
+            rack: String(row[6] || '').trim() || '未設定',
+            qty: parseInt(row[9]) || 0,
+            price: String(row[22] || '0').trim()
+          };
+          const cleanKey = rawPartNo.replace(/^0+/, '');
+          inventoryDB[rawPartNo] = item;
+          inventoryDB[cleanKey] = item;
+        }
+
+        await dbSet('inventory_db', inventoryDB);
+        const count = getUniqueInventoryCount();
+        const statusEl = document.getElementById('syncStatus');
+        if (statusEl) {
+          statusEl.innerText = `● data02.xlsx 已連線 (${count} 筆)`;
+          statusEl.style.color = "var(--accent-green)";
+        }
+        if (selectedHotspot) matchInventory();
+        return true;
+      } catch (err) {
+        return false;
+      }
+    }
+
+    // 自動同步 Google 雲端試算表庫存 (備援)
+    async function autoFetchCloudCSV() {
       const statusEl = document.getElementById('syncStatus');
       try {
         let text = "";
@@ -639,9 +692,10 @@
     async function init() {
       await openDB();
 
+      // 1. 自動載入伺服器目錄下的 data01.json
       let loadedFromServer = false;
       try {
-        const res = await fetch('data.json');
+        const res = await fetch(DATA_JSON_FILE);
         if (res.ok) {
           const serverData = await res.json();
           if (serverData && serverData.brands) {
@@ -652,6 +706,7 @@
         }
       } catch (e) {}
 
+      // 2. 若無 data01.json 則還原 IndexedDB
       if (!loadedFromServer) {
         const savedApp = await dbGet('app_data');
         if (savedApp && savedApp.brands && savedApp.brands.length >= 4) {
@@ -662,14 +717,23 @@
         }
       }
 
-      autoFetchInventory();
+      // 3. 自動載入 data02.xlsx 庫存表 (若失敗則抓 Google 試算表)
+      const excelLoaded = await autoFetchLocalExcel();
+      if (!excelLoaded) {
+        autoFetchCloudCSV();
+      }
 
       renderBrandSelect();
       renderModelSelect();
       renderTabs();
       loadCurrentView();
 
-      // 只有在電腦端打點模式下才建立熱點
+      document.getElementById('viewport').addEventListener('click', (e) => {
+        if (!e.target.closest('.hotspot') && !e.target.closest('#hoverCard')) {
+          hideHoverCard(true);
+        }
+      });
+
       document.getElementById('imageContainer').addEventListener('click', (e) => {
         if (isMobile() || !isAddingHotspotMode) return;
         if (e.target.classList.contains('hotspot') || !getCurrentView().baseImg) return;
@@ -736,9 +800,9 @@
       `).join('') + (!isMob ? `<button onclick="addView()" style="padding:4px 8px; font-size:12px;">➕ 新增視角</button>` : '');
     }
 
-    function switchBrand() { curBrandIdx = parseInt(document.getElementById('brandSelect').value); curModelIdx = 0; curViewIdx = 0; isAddingHotspotMode = false; hideHoverCard(); renderModelSelect(); renderTabs(); loadCurrentView(); }
-    function switchModel() { curModelIdx = parseInt(document.getElementById('modelSelect').value); curViewIdx = 0; isAddingHotspotMode = false; hideHoverCard(); renderTabs(); loadCurrentView(); }
-    function switchView(i) { curViewIdx = i; isAddingHotspotMode = false; hideHoverCard(); renderTabs(); loadCurrentView(); }
+    function switchBrand() { curBrandIdx = parseInt(document.getElementById('brandSelect').value); curModelIdx = 0; curViewIdx = 0; isAddingHotspotMode = false; hideHoverCard(true); renderModelSelect(); renderTabs(); loadCurrentView(); }
+    function switchModel() { curModelIdx = parseInt(document.getElementById('modelSelect').value); curViewIdx = 0; isAddingHotspotMode = false; hideHoverCard(true); renderTabs(); loadCurrentView(); }
+    function switchView(i) { curViewIdx = i; isAddingHotspotMode = false; hideHoverCard(true); renderTabs(); loadCurrentView(); }
 
     function renameBrand() {
       const curBrand = appData.brands[curBrandIdx];
@@ -895,15 +959,23 @@
         el.style.left = `${hs.x}%`;
         el.style.top = `${hs.y}%`;
         
-        // 電腦端滑過顯示
         el.addEventListener('mouseenter', (e) => {
-          if (!isMobile()) showHoverCard(hs, e);
+          if (!isMobile()) {
+            cancelCardHide();
+            showHoverCard(hs, e);
+          }
+        });
+
+        el.addEventListener('mouseleave', () => {
+          if (!isMobile()) {
+            scheduleCardHide();
+          }
         });
         
-        // 點擊事件 (手機端彈出底部抽屜 / 電腦端開啟編輯)
         el.addEventListener('click', (e) => { 
           e.stopPropagation(); 
           if (!isAddingHotspotMode) {
+            cancelCardHide();
             showHoverCard(hs, e);
             if (!isMobile()) {
               selectHotspot(hs);
@@ -916,7 +988,7 @@
     }
 
     function selectHotspot(hs) {
-      if (isMobile()) return; // 手機端純瀏覽，不打開編輯器
+      if (isMobile()) return;
       selectedHotspot = hs;
       const form = document.getElementById('editorForm');
       form.style.display = 'flex';
@@ -1072,13 +1144,28 @@
       const v = getCurrentView();
       v.hotspots = v.hotspots.filter(h => h.id !== selectedHotspot.id);
       deselectHotspot();
-      hideHoverCard();
+      hideHoverCard(true);
       autoSave();
       renderHotspots();
     }
 
-    // --- Hover Card Functions ---
+    // --- Hover Card 防抖機制 ---
+    function cancelCardHide() {
+      if (hoverHideTimer) {
+        clearTimeout(hoverHideTimer);
+        hoverHideTimer = null;
+      }
+    }
+
+    function scheduleCardHide() {
+      cancelCardHide();
+      hoverHideTimer = setTimeout(() => {
+        hideHoverCard(false);
+      }, 150);
+    }
+
     function showHoverCard(hs, e) {
+      cancelCardHide();
       hoverHotspot = hs;
       hoverPhotoIdx = 0;
       const card = document.getElementById('hoverCard');
@@ -1184,20 +1271,22 @@
       updateCardPhotoDisplay();
     }
 
-    function hideHoverCard() {
+    function hideHoverCard(force = false) {
+      cancelCardHide();
       const card = document.getElementById('hoverCard');
       if (isMobile()) {
-        card.classList.remove('mobile-active');
+        if (force) card.classList.remove('mobile-active');
       } else {
         card.style.display = 'none';
       }
     }
 
+    // 匯出時直接命名為 data01.json
     function exportData() {
       const blob = new Blob([JSON.stringify(appData, null, 2)], { type: 'application/json' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = `data.json`;
+      a.download = DATA_JSON_FILE;
       a.click();
     }
 
