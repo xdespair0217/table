@@ -334,7 +334,6 @@
   </div>
 
   <script>
-    // 指定檔名常數
     const DATA_JSON_FILE = "data01.json";
     const INVENTORY_EXCEL_FILE = "data02.xlsx";
     const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQe7p6Eh_TNUQMJjwaerFPf-V3ihBDJ2UKrzdPehSlXYi5CjQCCiWeTQ6co0QQR2pkMpPPYN7Fw9cjO/pub?gid=453721344&single=true&output=csv";
@@ -618,17 +617,11 @@
         }
         if (selectedHotspot) matchInventory();
       } catch (err) {
-        const savedInv = await dbGet('inventory_db');
-        if (savedInv) {
-          inventoryDB = savedInv;
-          if (statusEl) {
-            statusEl.innerText = `● 庫存記憶已就緒 (${getUniqueInventoryCount()} 筆)`;
-            statusEl.style.color = "var(--accent-green)";
-          }
-        }
+        // 失敗時不動作
       }
     }
 
+    // 手動載入本機 Excel 檔案
     function loadLocalInventoryFile(e) {
       const file = e.target.files[0];
       if (!file) return;
@@ -691,8 +684,9 @@
 
     async function init() {
       await openDB();
+      const statusEl = document.getElementById('syncStatus');
 
-      // 1. 自動載入伺服器目錄下的 data01.json
+      // 1. 底圖與熱點資料載入
       let loadedFromServer = false;
       try {
         const res = await fetch(DATA_JSON_FILE);
@@ -706,7 +700,6 @@
         }
       } catch (e) {}
 
-      // 2. 若無 data01.json 則還原 IndexedDB
       if (!loadedFromServer) {
         const savedApp = await dbGet('app_data');
         if (savedApp && savedApp.brands && savedApp.brands.length >= 4) {
@@ -717,10 +710,21 @@
         }
       }
 
-      // 3. 自動載入 data02.xlsx 庫存表 (若失敗則抓 Google 試算表)
-      const excelLoaded = await autoFetchLocalExcel();
-      if (!excelLoaded) {
-        autoFetchCloudCSV();
+      // 2. 庫存資料載入：優先讀取已儲存的 IndexedDB 快取（防重整被沖掉）
+      const savedInv = await dbGet('inventory_db');
+      if (savedInv && Object.keys(savedInv).length > 0) {
+        inventoryDB = savedInv;
+        const count = getUniqueInventoryCount();
+        if (statusEl) {
+          statusEl.innerText = `● 庫存記憶已就緒 (${count} 筆)`;
+          statusEl.style.color = "var(--accent-green)";
+        }
+      } else {
+        // 若記憶庫是空的，才執行自動抓取 data02.xlsx 或雲端
+        const excelLoaded = await autoFetchLocalExcel();
+        if (!excelLoaded) {
+          await autoFetchCloudCSV();
+        }
       }
 
       renderBrandSelect();
@@ -1095,7 +1099,6 @@
       `).join('');
     }
 
-    // --- Lightbox Functions ---
     function openLightbox(idx) {
       activePhotos = selectedHotspot ? selectedHotspot.photos : (hoverHotspot ? hoverHotspot.photos : []);
       if (!activePhotos || activePhotos.length === 0) return;
@@ -1149,7 +1152,6 @@
       renderHotspots();
     }
 
-    // --- Hover Card 防抖機制 ---
     function cancelCardHide() {
       if (hoverHideTimer) {
         clearTimeout(hoverHideTimer);
@@ -1281,7 +1283,6 @@
       }
     }
 
-    // 匯出時直接命名為 data01.json
     function exportData() {
       const blob = new Blob([JSON.stringify(appData, null, 2)], { type: 'application/json' });
       const a = document.createElement('a');
