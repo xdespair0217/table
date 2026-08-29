@@ -40,9 +40,14 @@
     .image-container { position: relative; display: inline-block; box-shadow: 0 0 30px rgba(0,0,0,0.8); }
     .base-img { max-width: 100%; max-height: calc(100vh - 130px); display: block; object-fit: contain; }
 
-    /* 底圖懸浮控制列 */
-    .base-img-toolbar { position: absolute; top: 12px; left: 12px; display: flex; gap: 8px; z-index: 20; background: rgba(15, 23, 36, 0.85); padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border-color); backdrop-filter: blur(8px); }
-    .base-img-toolbar button { font-size: 12px; padding: 4px 8px; }
+    /* 打點模式游標 */
+    .image-container.adding-mode { cursor: crosshair !important; }
+    .image-container.adding-mode .base-img { cursor: crosshair !important; }
+
+    /* 畫布懸浮操作列 */
+    .canvas-toolbar { position: absolute; top: 14px; left: 14px; display: flex; gap: 8px; z-index: 20; background: rgba(15, 23, 36, 0.9); padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-color); backdrop-filter: blur(8px); }
+    .mode-btn { display: inline-flex; align-items: center; gap: 6px; font-weight: bold; padding: 6px 12px; border-radius: 4px; }
+    .mode-btn.active { background: #0077aa; border-color: var(--accent-cyan); color: #fff; box-shadow: 0 0 10px rgba(0,210,255,0.5); }
 
     /* Hotspots */
     .hotspot { position: absolute; width: 30px; height: 30px; transform: translate(-50%, -50%); border-radius: 50%; cursor: pointer; z-index: 5; transition: transform 0.2s; }
@@ -159,7 +164,9 @@
   <div class="workspace">
     <div class="viewport" id="viewport">
       
-      <div class="base-img-toolbar" id="baseImgToolbar" style="display:none;">
+      <!-- 畫布專屬操作列（打點模式開關 ＋ 底圖管理） -->
+      <div class="canvas-toolbar" id="canvasToolbar" style="display:none;">
+        <button id="addHotspotModeBtn" class="mode-btn" onclick="toggleAddHotspotMode()">📍 新增熱點標記 (點擊啟用)</button>
         <button onclick="document.getElementById('baseImgInput').click()">🔄 更換底圖</button>
         <button class="danger" onclick="deleteBaseImage()">🗑️ 刪除底圖</button>
       </div>
@@ -389,6 +396,8 @@
     let curBrandIdx = 0, curModelIdx = 0, curViewIdx = 0;
     let selectedHotspot = null;
 
+    let isAddingHotspotMode = false; // 打點模式狀態 (預設關閉)
+
     let activePhotos = [];
     let currentPhotoIdx = 0;
 
@@ -402,6 +411,29 @@
 
     function getUniqueInventoryCount() {
       return new Set(Object.values(inventoryDB).map(item => item.rawPartNo)).size;
+    }
+
+    function toggleAddHotspotMode() {
+      if (!getCurrentView().baseImg) {
+        alert("請先上傳此部位底圖！");
+        return;
+      }
+      isAddingHotspotMode = !isAddingHotspotMode;
+      updateAddModeUI();
+    }
+
+    function updateAddModeUI() {
+      const btn = document.getElementById('addHotspotModeBtn');
+      const container = document.getElementById('imageContainer');
+      if (isAddingHotspotMode) {
+        btn.classList.add('active');
+        btn.innerText = "📍 請點擊底圖任意處打點 (按此取消)";
+        container.classList.add('adding-mode');
+      } else {
+        btn.classList.remove('active');
+        btn.innerText = "📍 新增熱點標記 (點擊啟用)";
+        container.classList.remove('adding-mode');
+      }
     }
 
     function loadLocalInventoryFile(e) {
@@ -492,8 +524,11 @@
       renderTabs();
       loadCurrentView();
 
+      // 只有在啟動打點模式時，點擊畫布才會產生新熱點
       document.getElementById('imageContainer').addEventListener('click', (e) => {
+        if (!isAddingHotspotMode) return; // 瀏覽模式下絕對不產生熱點
         if (e.target.classList.contains('hotspot') || !getCurrentView().baseImg) return;
+        
         const rect = e.currentTarget.getBoundingClientRect();
         const x = ((e.clientX - rect.left) / rect.width * 100).toFixed(2);
         const y = ((e.clientY - rect.top) / rect.height * 100).toFixed(2);
@@ -515,6 +550,10 @@
         autoSave();
         renderHotspots();
         selectHotspot(newHotspot);
+
+        // 打完點後自動切回安全瀏覽模式
+        isAddingHotspotMode = false;
+        updateAddModeUI();
       });
 
       window.addEventListener('keydown', (e) => {
@@ -551,11 +590,10 @@
       `).join('') + `<button onclick="addView()" style="padding:4px 8px; font-size:12px;">➕ 新增視角</button>`;
     }
 
-    function switchBrand() { curBrandIdx = parseInt(document.getElementById('brandSelect').value); curModelIdx = 0; curViewIdx = 0; renderModelSelect(); renderTabs(); loadCurrentView(); }
-    function switchModel() { curModelIdx = parseInt(document.getElementById('modelSelect').value); curViewIdx = 0; renderTabs(); loadCurrentView(); }
-    function switchView(i) { curViewIdx = i; renderTabs(); loadCurrentView(); }
+    function switchBrand() { curBrandIdx = parseInt(document.getElementById('brandSelect').value); curModelIdx = 0; curViewIdx = 0; isAddingHotspotMode = false; renderModelSelect(); renderTabs(); loadCurrentView(); }
+    function switchModel() { curModelIdx = parseInt(document.getElementById('modelSelect').value); curViewIdx = 0; isAddingHotspotMode = false; renderTabs(); loadCurrentView(); }
+    function switchView(i) { curViewIdx = i; isAddingHotspotMode = false; renderTabs(); loadCurrentView(); }
 
-    // --- 廠牌修改 / 新增 / 刪除 ---
     function renameBrand() {
       const curBrand = appData.brands[curBrandIdx];
       const newName = prompt(`請輸入「${curBrand.name}」的新廠牌名稱:`, curBrand.name);
@@ -591,7 +629,6 @@
       renderBrandSelect(); renderModelSelect(); renderTabs(); loadCurrentView();
     }
 
-    // --- 車型修改 / 新增 / 刪除 ---
     function renameModel() {
       const curModel = appData.brands[curBrandIdx].models[curModelIdx];
       const newName = prompt(`請輸入「${curModel.name}」的新車型名稱:`, curModel.name);
@@ -627,7 +664,6 @@
       renderModelSelect(); renderTabs(); loadCurrentView();
     }
 
-    // --- 視角修改 / 新增 / 刪除 ---
     function renameView(i) {
       const view = appData.brands[curBrandIdx].models[curModelIdx].views[i];
       const newName = prompt(`請輸入「${view.name}」部位視角的新名稱:`, view.name);
@@ -662,7 +698,7 @@
       const v = getCurrentView();
       const img = document.getElementById('baseImage');
       const promptBox = document.getElementById('noImagePrompt');
-      const toolbar = document.getElementById('baseImgToolbar');
+      const toolbar = document.getElementById('canvasToolbar');
       
       if (v.baseImg) {
         img.src = v.baseImg;
@@ -674,6 +710,8 @@
         promptBox.style.display = 'block';
         toolbar.style.display = 'none';
       }
+      isAddingHotspotMode = false;
+      updateAddModeUI();
       deselectHotspot();
       renderHotspots();
     }
@@ -712,7 +750,12 @@
         el.style.top = `${hs.y}%`;
         
         el.addEventListener('mouseenter', (e) => showHoverCard(hs, e));
-        el.addEventListener('click', (e) => { e.stopPropagation(); selectHotspot(hs); });
+        el.addEventListener('click', (e) => { 
+          e.stopPropagation(); 
+          if (!isAddingHotspotMode) {
+            selectHotspot(hs); 
+          }
+        });
 
         container.appendChild(el);
       });
