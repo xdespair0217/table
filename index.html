@@ -23,7 +23,7 @@
 
     /* Header */
     header { background: #141c28; border-bottom: 1px solid var(--border-color); padding: 8px 16px; display: flex; justify-content: space-between; align-items: center; z-index: 10; flex-wrap: wrap; gap: 8px; }
-    .nav-selectors { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+    .nav-selectors { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
     .btn-group { display: inline-flex; gap: 4px; align-items: center; }
     select, input, button { background: #1a2332; border: 1px solid var(--border-color); color: var(--text-main); padding: 6px 10px; border-radius: 4px; font-size: 13px; outline: none; }
     select:focus, input:focus { border-color: var(--accent-cyan); }
@@ -61,7 +61,7 @@
     .hotspot:hover { transform: translate(-50%, -50%) scale(1.25); z-index: 10; }
     @keyframes pulse { 0% { transform: scale(0.6); opacity: 1; } 100% { transform: scale(1.3); opacity: 0; } }
 
-    /* Sidebar Editor (電腦端在右側，手機端可切換或隱藏) */
+    /* Sidebar Editor (電腦端專屬) */
     .sidebar { width: 440px; background: var(--panel-bg); border-left: 1px solid var(--border-color); display: flex; flex-direction: column; z-index: 15; backdrop-filter: blur(10px); }
     .sidebar-header { padding: 12px 16px; border-bottom: 1px solid var(--border-color); font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
     .sidebar-content { padding: 15px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 14px; }
@@ -80,7 +80,7 @@
     .ext-link-row input { flex: 1; }
     .ext-test-btn { background: #1e2c3f; border: 1px solid var(--accent-cyan); color: var(--accent-cyan); padding: 6px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; }
 
-    /* Hover Inspection Card (電腦端為懸浮窗，手機端轉為底部抽屜 Bottom Sheet) */
+    /* Hover Inspection Card (電腦端為浮動卡片，手機端為底部抽屜) */
     .hover-card { position: absolute; background: rgba(13, 20, 32, 0.98); border: 1.5px solid var(--accent-cyan); border-radius: 12px; padding: 16px; width: 480px; pointer-events: auto; z-index: 50; display: none; backdrop-filter: blur(14px); box-shadow: 0 20px 45px rgba(0,0,0,0.8); }
     .hover-slider-wrap { position: relative; width: 100%; height: 280px; border-radius: 8px; overflow: hidden; margin-bottom: 12px; border: 1px solid var(--border-color); background: #000; }
     .hover-slider-wrap img { width: 100%; height: 100%; object-fit: contain; }
@@ -101,7 +101,7 @@
 
     .card-links-group { display: flex; gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border-color); flex-wrap: wrap; }
     .card-ext-btn { display: inline-flex; align-items: center; gap: 4px; background: #162438; border: 1px solid var(--accent-cyan); color: var(--accent-cyan); text-decoration: none; padding: 6px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; }
-    .card-close-btn { display: none; position: absolute; top: 10px; right: 12px; font-size: 20px; color: #fff; background: transparent; border: none; }
+    .card-close-btn { display: none; position: absolute; top: 12px; right: 14px; font-size: 22px; color: #fff; background: transparent; border: none; cursor: pointer; }
 
     /* Tabs */
     .view-tabs { display: flex; gap: 6px; padding: 8px 16px; background: #0c1017; border-bottom: 1px solid var(--border-color); align-items: center; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; }
@@ -119,25 +119,57 @@
     .lightbox-counter { position: absolute; bottom: 20px; font-size: 13px; background: rgba(0,0,0,0.7); color: #00d2ff; padding: 4px 12px; border-radius: 20px; }
 
     /* ========================================================
-       📱 手機與平板專屬 RWD 響應式優化 (螢幕小於 768px 時自動觸發)
+       📱 手機專屬純瀏覽模式 (Mobile Pure Viewer Mode)
        ======================================================== */
     @media (max-width: 768px) {
-      header { padding: 6px 10px; font-size: 12px; }
-      .nav-selectors select, .nav-selectors button { font-size: 12px; padding: 4px 8px; }
-      .workspace { flex-direction: column; }
-      
-      /* 手機端側邊編輯欄預設折疊或浮動 */
-      .sidebar { position: fixed; bottom: 0; left: 0; width: 100%; height: 75vh; border-radius: 16px 16px 0 0; border-top: 2px solid var(--accent-cyan); box-shadow: 0 -10px 30px rgba(0,0,0,0.8); transform: translateY(100%); transition: transform 0.3s ease-out; }
-      .sidebar.mobile-open { transform: translateY(0); }
-      
-      /* 手機端檢測卡片改為底部滑出抽屜 (Bottom Sheet) */
-      .hover-card { position: fixed; bottom: 0; left: 0; width: 100% !important; max-height: 80vh; overflow-y: auto; border-radius: 16px 16px 0 0; border-top: 2px solid var(--accent-cyan); border-left: none; border-right: none; transform: none !important; top: auto !important; }
+      /* 隱藏所有編輯與管理按鈕 */
+      .desktop-admin-only,
+      .btn-group,
+      .canvas-toolbar,
+      .sidebar,
+      .tab-del-btn,
+      #noImagePrompt button {
+        display: none !important;
+      }
+
+      /* 頂部極簡導航 */
+      header { padding: 8px 12px; justify-content: flex-start; gap: 10px; background: #0f141c; }
+      .nav-selectors { width: 100%; display: flex; justify-content: space-between; }
+      .nav-selectors select { font-size: 14px; padding: 8px 12px; flex: 1; font-weight: bold; background: #162232; }
+
+      /* 部位標籤優化 */
+      .view-tabs { padding: 6px 12px; background: #0a0d14; }
+      .tab { font-size: 13px; padding: 6px 12px; }
+
+      /* 底圖滿版 */
+      .workspace { height: calc(100vh - 100px); height: calc(100dvh - 100px); }
+      .base-img { max-height: calc(100vh - 130px); max-height: calc(100dvh - 130px); }
+
+      /* 底部滑出抽屜 (Bottom Sheet) */
+      .hover-card { 
+        position: fixed; 
+        bottom: 0; 
+        left: 0; 
+        width: 100% !important; 
+        max-height: 82vh; 
+        overflow-y: auto; 
+        border-radius: 20px 20px 0 0; 
+        border: none;
+        border-top: 2px solid var(--accent-cyan); 
+        box-shadow: 0 -15px 40px rgba(0,0,0,0.9);
+        top: auto !important; 
+        transform: translateY(100%);
+        transition: transform 0.3s cubic-bezier(0.1, 0.9, 0.2, 1);
+        display: block !important;
+        visibility: hidden;
+      }
+      .hover-card.mobile-active {
+        visibility: visible;
+        transform: translateY(0);
+      }
       .card-close-btn { display: block; }
-      .hover-slider-wrap { height: 220px; }
-      
-      .canvas-toolbar { top: 8px; left: 8px; padding: 4px 8px; }
-      .mode-btn { font-size: 12px; padding: 4px 8px; }
-      .base-img { max-height: calc(100vh - 180px); }
+      .hover-slider-wrap { height: 230px; }
+      .card-links-group .card-ext-btn { flex: 1; justify-content: center; padding: 8px; font-size: 13px; }
     }
   </style>
 </head>
@@ -145,27 +177,26 @@
 
   <header>
     <div class="nav-selectors">
-      <!-- 廠牌 -->
-      <label>廠牌:</label>
+      <!-- 廠牌選單 -->
       <select id="brandSelect" onchange="switchBrand()"></select>
-      <div class="btn-group">
-        <button onclick="renameBrand()" title="修改當前廠牌名稱">✏️ 改名</button>
-        <button onclick="addBrand()" title="新增廠牌">➕ 廠牌</button>
-        <button class="danger" onclick="deleteBrand()" title="刪除當前廠牌">🗑️</button>
+      <div class="btn-group desktop-admin-only">
+        <button onclick="renameBrand()">✏️ 改名</button>
+        <button onclick="addBrand()">➕ 廠牌</button>
+        <button class="danger" onclick="deleteBrand()">🗑️</button>
       </div>
       
-      <!-- 車型 -->
-      <label style="margin-left: 4px;">車型:</label>
+      <!-- 車型選單 -->
       <select id="modelSelect" onchange="switchModel()"></select>
-      <div class="btn-group">
-        <button onclick="renameModel()" title="修改當前車型名稱">✏️ 改名</button>
-        <button onclick="addModel()" title="新增車型">➕ 車型</button>
-        <button class="danger" onclick="deleteModel()" title="刪除當前車型">🗑️</button>
+      <div class="btn-group desktop-admin-only">
+        <button onclick="renameModel()">✏️ 改名</button>
+        <button onclick="addModel()">➕ 車型</button>
+        <button class="danger" onclick="deleteModel()">🗑️</button>
       </div>
     </div>
 
-    <div style="display:flex; align-items:center; gap:6px;">
-      <span id="syncStatus" style="font-size: 12px; color: var(--accent-cyan); font-weight:bold;">● 讀取記憶庫中...</span>
+    <!-- 電腦端管理工具列 (手機端自動完全隱藏) -->
+    <div class="desktop-admin-only" style="display:flex; align-items:center; gap:6px;">
+      <span id="syncStatus" style="font-size: 12px; color: var(--accent-cyan); font-weight:bold;">● 讀取中...</span>
       <button class="primary" onclick="document.getElementById('inventoryFileInput').click()">📂 載入庫存表</button>
       <input type="file" id="inventoryFileInput" accept=".xlsx, .xls, .csv" style="display:none" onchange="loadLocalInventoryFile(event)">
       <button onclick="exportData()">💾 匯出</button>
@@ -180,7 +211,8 @@
   <div class="workspace">
     <div class="viewport" id="viewport">
       
-      <div class="canvas-toolbar" id="canvasToolbar" style="display:none;">
+      <!-- 畫布懸浮操作列 (電腦端專屬) -->
+      <div class="canvas-toolbar desktop-admin-only" id="canvasToolbar" style="display:none;">
         <button id="addHotspotModeBtn" class="mode-btn" onclick="toggleAddHotspotMode()">📍 新增熱點標記 (點擊啟用)</button>
         <button onclick="document.getElementById('baseImgInput').click()">🔄 更換底圖</button>
         <button class="danger" onclick="deleteBaseImage()">🗑️ 刪除底圖</button>
@@ -190,17 +222,17 @@
         <img id="baseImage" class="base-img" src="" alt="請上傳底圖" style="display:none;">
         <div id="noImagePrompt" style="padding: 40px; border: 2px dashed var(--border-color); text-align: center; border-radius: 8px;">
           <p style="margin-bottom: 12px; color: var(--text-muted); font-size: 14px;">尚未上傳此部位底圖</p>
-          <button class="primary" onclick="document.getElementById('baseImgInput').click()">上傳部位底圖</button>
+          <button class="primary desktop-admin-only" onclick="document.getElementById('baseImgInput').click()">上傳部位底圖</button>
         </div>
       </div>
       <input type="file" id="baseImgInput" accept="image/*" style="display:none" onchange="uploadBaseImage(event)">
     </div>
 
-    <!-- Hover Card (電腦端為浮動卡片，手機端為底部抽屜) -->
+    <!-- 零件資訊卡 (電腦懸停 / 手機底部抽屜) -->
     <div class="hover-card" id="hoverCard">
       <button class="card-close-btn" onclick="hideHoverCard()">✕</button>
       <div class="hover-slider-wrap" id="hoverSliderWrap" style="display:none;">
-        <img id="cardImg" src="">
+        <img id="cardImg" src="" onclick="openLightboxFromCard()">
         <button class="slider-nav-btn prev" onclick="prevCardPhoto(event)">◀</button>
         <button class="slider-nav-btn next" onclick="nextCardPhoto(event)">▶</button>
         <div class="slider-counter" id="cardPhotoCounter">1 / 1</div>
@@ -223,8 +255,8 @@
       </div>
     </div>
 
-    <!-- Sidebar Detail Editor -->
-    <div class="sidebar" id="sidebar">
+    <!-- Sidebar Editor (電腦端專屬管理編輯欄) -->
+    <div class="sidebar desktop-admin-only" id="sidebar">
       <div class="sidebar-header">
         <span id="editorTitle">零件熱點編輯</span>
         <div style="display:flex; gap:6px;">
@@ -310,6 +342,11 @@
 
   <script>
     const ADMIN_PIN = "0000";
+    const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQe7p6Eh_TNUQMJjwaerFPf-V3ihBDJ2UKrzdPehSlXYi5CjQCCiWeTQ6co0QQR2pkMpPPYN7Fw9cjO/pub?gid=453721344&single=true&output=csv";
+
+    function isMobile() {
+      return window.innerWidth <= 768;
+    }
 
     function verifyAdminPIN(actionName) {
       const input = prompt(`【管理員安全驗證】\n請輸入 4 位數密碼以執行「${actionName}」:`);
@@ -455,6 +492,90 @@
       }
     }
 
+    function parseCSV(text) {
+      const p = [];
+      let row = [''];
+      let inQuotes = false;
+      for (let i = 0; i < text.length; i++) {
+        const c = text[i];
+        const next = text[i+1];
+        if (c === '"') {
+          if (inQuotes && next === '"') { row[row.length - 1] += '"'; i++; }
+          else { inQuotes = !inQuotes; }
+        } else if (c === ',' && !inQuotes) {
+          row.push('');
+        } else if ((c === '\r' || c === '\n') && !inQuotes) {
+          if (c === '\r' && next === '\n') { i++; }
+          p.push(row);
+          row = [''];
+        } else {
+          row[row.length - 1] += c;
+        }
+      }
+      if (row.length > 1 || row[0] !== '') p.push(row);
+      return p;
+    }
+
+    async function autoFetchInventory() {
+      const statusEl = document.getElementById('syncStatus');
+      try {
+        let text = "";
+        try {
+          const res = await fetch(CSV_URL);
+          text = await res.text();
+        } catch (e) {
+          const proxyRes = await fetch("https://api.allorigins.win/raw?url=" + encodeURIComponent(CSV_URL));
+          text = await proxyRes.text();
+        }
+
+        const rows = parseCSV(text);
+        let headerRow = 17;
+        for (let i = 0; i < Math.min(25, rows.length); i++) {
+          if (rows[i].some(col => (col || '').includes('零件代號'))) {
+            headerRow = i;
+            break;
+          }
+        }
+
+        inventoryDB = {};
+        for (let i = headerRow + 1; i < rows.length; i++) {
+          const row = rows[i];
+          if (!row || row.length < 7) continue;
+          const rawPartNo = (row[3] || '').trim();
+          if (!rawPartNo) continue;
+
+          const item = {
+            rawPartNo: rawPartNo,
+            name: (row[4] || '').trim(),
+            spec: (row[5] || '').trim(),
+            rack: (row[6] || '').trim() || '未設定',
+            qty: parseInt(row[9]) || 0,
+            price: (row[22] || '0').trim()
+          };
+          const cleanKey = rawPartNo.replace(/^0+/, '');
+          inventoryDB[rawPartNo] = item;
+          inventoryDB[cleanKey] = item;
+        }
+
+        await dbSet('inventory_db', inventoryDB);
+        const count = getUniqueInventoryCount();
+        if (statusEl) {
+          statusEl.innerText = `● 雲端庫存已連線 (${count} 筆)`;
+          statusEl.style.color = "var(--accent-green)";
+        }
+        if (selectedHotspot) matchInventory();
+      } catch (err) {
+        const savedInv = await dbGet('inventory_db');
+        if (savedInv) {
+          inventoryDB = savedInv;
+          if (statusEl) {
+            statusEl.innerText = `● 庫存記憶已就緒 (${getUniqueInventoryCount()} 筆)`;
+            statusEl.style.color = "var(--accent-green)";
+          }
+        }
+      }
+    }
+
     function loadLocalInventoryFile(e) {
       const file = e.target.files[0];
       if (!file) return;
@@ -502,7 +623,6 @@
           }
 
           await dbSet('inventory_db', inventoryDB);
-
           const count = getUniqueInventoryCount();
           statusEl.innerText = `● 庫存已永久記憶 (${count} 筆)`;
           statusEl.style.color = "var(--accent-green)";
@@ -518,33 +638,40 @@
 
     async function init() {
       await openDB();
-      const statusEl = document.getElementById('syncStatus');
 
-      const savedInv = await dbGet('inventory_db');
-      if (savedInv) {
-        inventoryDB = savedInv;
-        const count = getUniqueInventoryCount();
-        statusEl.innerText = `● 庫存記憶已就緒 (${count} 筆)`;
-        statusEl.style.color = "var(--accent-green)";
-      } else {
-        statusEl.innerText = `○ 請載入庫存表一次 (自動記憶)`;
+      let loadedFromServer = false;
+      try {
+        const res = await fetch('data.json');
+        if (res.ok) {
+          const serverData = await res.json();
+          if (serverData && serverData.brands) {
+            appData = serverData;
+            await autoSave();
+            loadedFromServer = true;
+          }
+        }
+      } catch (e) {}
+
+      if (!loadedFromServer) {
+        const savedApp = await dbGet('app_data');
+        if (savedApp && savedApp.brands && savedApp.brands.length >= 4) {
+          appData = savedApp;
+        } else {
+          appData = JSON.parse(JSON.stringify(defaultAppData));
+          await autoSave();
+        }
       }
 
-      const savedApp = await dbGet('app_data');
-      if (savedApp && savedApp.brands && savedApp.brands.length >= 4) {
-        appData = savedApp;
-      } else {
-        appData = JSON.parse(JSON.stringify(defaultAppData));
-        await autoSave();
-      }
+      autoFetchInventory();
 
       renderBrandSelect();
       renderModelSelect();
       renderTabs();
       loadCurrentView();
 
+      // 只有在電腦端打點模式下才建立熱點
       document.getElementById('imageContainer').addEventListener('click', (e) => {
-        if (!isAddingHotspotMode) return;
+        if (isMobile() || !isAddingHotspotMode) return;
         if (e.target.classList.contains('hotspot') || !getCurrentView().baseImg) return;
         
         const rect = e.currentTarget.getBoundingClientRect();
@@ -599,17 +726,19 @@
     function renderTabs() {
       const container = document.getElementById('viewTabsContainer');
       const views = appData.brands[curBrandIdx].models[curModelIdx].views;
+      const isMob = isMobile();
+
       container.innerHTML = views.map((v, i) => `
-        <div class="tab ${i === curViewIdx ? 'active' : ''}" onclick="switchView(${i})" ondblclick="renameView(${i})" title="雙擊可修改名稱">
+        <div class="tab ${i === curViewIdx ? 'active' : ''}" onclick="switchView(${i})" ${!isMob ? `ondblclick="renameView(${i})" title="雙擊可修改名稱"` : ''}>
           <span>${v.name}</span>
-          ${views.length > 1 ? `<span class="tab-del-btn" onclick="event.stopPropagation(); deleteView(${i})">✕</span>` : ''}
+          ${(!isMob && views.length > 1) ? `<span class="tab-del-btn" onclick="event.stopPropagation(); deleteView(${i})">✕</span>` : ''}
         </div>
-      `).join('') + `<button onclick="addView()" style="padding:4px 8px; font-size:12px;">➕ 新增視角</button>`;
+      `).join('') + (!isMob ? `<button onclick="addView()" style="padding:4px 8px; font-size:12px;">➕ 新增視角</button>` : '');
     }
 
-    function switchBrand() { curBrandIdx = parseInt(document.getElementById('brandSelect').value); curModelIdx = 0; curViewIdx = 0; isAddingHotspotMode = false; renderModelSelect(); renderTabs(); loadCurrentView(); }
-    function switchModel() { curModelIdx = parseInt(document.getElementById('modelSelect').value); curViewIdx = 0; isAddingHotspotMode = false; renderTabs(); loadCurrentView(); }
-    function switchView(i) { curViewIdx = i; isAddingHotspotMode = false; renderTabs(); loadCurrentView(); }
+    function switchBrand() { curBrandIdx = parseInt(document.getElementById('brandSelect').value); curModelIdx = 0; curViewIdx = 0; isAddingHotspotMode = false; hideHoverCard(); renderModelSelect(); renderTabs(); loadCurrentView(); }
+    function switchModel() { curModelIdx = parseInt(document.getElementById('modelSelect').value); curViewIdx = 0; isAddingHotspotMode = false; hideHoverCard(); renderTabs(); loadCurrentView(); }
+    function switchView(i) { curViewIdx = i; isAddingHotspotMode = false; hideHoverCard(); renderTabs(); loadCurrentView(); }
 
     function renameBrand() {
       const curBrand = appData.brands[curBrandIdx];
@@ -721,11 +850,11 @@
         img.src = v.baseImg;
         img.style.display = 'block';
         promptBox.style.display = 'none';
-        toolbar.style.display = 'flex';
+        if (toolbar && !isMobile()) toolbar.style.display = 'flex';
       } else {
         img.style.display = 'none';
         promptBox.style.display = 'block';
-        toolbar.style.display = 'none';
+        if (toolbar) toolbar.style.display = 'none';
       }
       isAddingHotspotMode = false;
       updateAddModeUI();
@@ -766,15 +895,17 @@
         el.style.left = `${hs.x}%`;
         el.style.top = `${hs.y}%`;
         
+        // 電腦端滑過顯示
         el.addEventListener('mouseenter', (e) => {
-          if (window.innerWidth > 768) showHoverCard(hs, e);
+          if (!isMobile()) showHoverCard(hs, e);
         });
         
+        // 點擊事件 (手機端彈出底部抽屜 / 電腦端開啟編輯)
         el.addEventListener('click', (e) => { 
           e.stopPropagation(); 
           if (!isAddingHotspotMode) {
             showHoverCard(hs, e);
-            if (window.innerWidth > 768) {
+            if (!isMobile()) {
               selectHotspot(hs);
             }
           }
@@ -785,9 +916,9 @@
     }
 
     function selectHotspot(hs) {
+      if (isMobile()) return; // 手機端純瀏覽，不打開編輯器
       selectedHotspot = hs;
       const form = document.getElementById('editorForm');
-      const sidebar = document.getElementById('sidebar');
       form.style.display = 'flex';
       document.getElementById('deleteHotspotBtn').style.display = 'block';
       document.getElementById('sidebarCloseBtn').style.display = 'block';
@@ -805,10 +936,6 @@
       
       document.getElementById('inputPartName').oninput = (e) => { hs.partName = e.target.value; autoSave(); };
       document.getElementById('inputNotes').oninput = (e) => { hs.notes = e.target.value; autoSave(); };
-
-      if (window.innerWidth <= 768) {
-        sidebar.classList.add('mobile-open');
-      }
     }
 
     function handleExtUrlInput(num) {
@@ -832,10 +959,12 @@
 
     function deselectHotspot() {
       selectedHotspot = null;
-      document.getElementById('editorForm').style.display = 'none';
-      document.getElementById('deleteHotspotBtn').style.display = 'none';
-      document.getElementById('sidebarCloseBtn').style.display = 'none';
-      document.getElementById('sidebar').classList.remove('mobile-open');
+      const form = document.getElementById('editorForm');
+      if (form) form.style.display = 'none';
+      const delBtn = document.getElementById('deleteHotspotBtn');
+      if (delBtn) delBtn.style.display = 'none';
+      const closeBtn = document.getElementById('sidebarCloseBtn');
+      if (closeBtn) closeBtn.style.display = 'none';
     }
 
     function updateHotspotVisual() {
@@ -901,6 +1030,12 @@
       currentPhotoIdx = idx;
       updateLightboxView();
       document.getElementById('lightboxModal').style.display = 'flex';
+    }
+
+    function openLightboxFromCard() {
+      if (hoverHotspot && hoverHotspot.photos && hoverHotspot.photos.length > 0) {
+        openLightbox(hoverPhotoIdx);
+      }
     }
 
     function updateLightboxView() {
@@ -1013,11 +1148,14 @@
 
       linksGroup.style.display = hasAnyLink ? 'flex' : 'none';
 
-      card.style.display = 'block';
-
-      if (window.innerWidth > 768 && e) {
-        card.style.left = `${Math.min(e.clientX + 20, window.innerWidth - 520)}px`;
-        card.style.top = `${Math.min(e.clientY - 40, window.innerHeight - 560)}px`;
+      if (isMobile()) {
+        card.classList.add('mobile-active');
+      } else {
+        card.style.display = 'block';
+        if (e) {
+          card.style.left = `${Math.min(e.clientX + 20, window.innerWidth - 520)}px`;
+          card.style.top = `${Math.min(e.clientY - 40, window.innerHeight - 560)}px`;
+        }
       }
     }
 
@@ -1047,14 +1185,19 @@
     }
 
     function hideHoverCard() {
-      document.getElementById('hoverCard').style.display = 'none';
+      const card = document.getElementById('hoverCard');
+      if (isMobile()) {
+        card.classList.remove('mobile-active');
+      } else {
+        card.style.display = 'none';
+      }
     }
 
     function exportData() {
       const blob = new Blob([JSON.stringify(appData, null, 2)], { type: 'application/json' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = `parts_inspection_backup_${new Date().toISOString().slice(0,10)}.json`;
+      a.download = `data.json`;
       a.click();
     }
 
