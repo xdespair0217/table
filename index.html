@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>車輛檢測與零件透視系統 - Visual Inspection Hub</title>
+  <!-- SheetJS 解析庫 -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    :root {
+      --bg-dark: #0f141c;
+      --panel-bg: rgba(22, 30, 44, 0.9);
+      --border-color: #2a3b53;
+      --accent-cyan: #00d2ff;
+      --accent-green: #00e676;
+      --accent-orange: #ff9100;
+      --accent-red: #ff3d00;
+      --text-main: #f0f4f8;
+      --text-muted: #8a9ba8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    body { background-color: var(--bg-dark); color: var(--text-main); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+    /* Header */
+    header { background: #141c28; border-bottom: 1px solid var(--border-color); padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; z-index: 10; }
+    .nav-selectors { display: flex; gap: 10px; align-items: center; }
+    select, input, button { background: #1a2332; border: 1px solid var(--border-color); color: var(--text-main); padding: 6px 12px; border-radius: 4px; font-size: 14px; outline: none; }
+    select:focus, input:focus { border-color: var(--accent-cyan); }
+    button { cursor: pointer; transition: all 0.2s; }
+    button:hover { background: #26354a; border-color: var(--accent-cyan); }
+    button.primary { background: #006699; border-color: var(--accent-cyan); }
+    button.primary:hover { background: #0088cc; }
+    button.danger { background: #5a1a1a; border-color: var(--accent-red); }
+    button.danger:hover { background: #7a2424; }
+
+    /* Workspace */
+    .workspace { display: flex; flex: 1; height: calc(100vh - 95px); position: relative; }
+    .viewport { flex: 1; position: relative; background: #080b10; overflow: auto; display: flex; align-items: center; justify-content: center; user-select: none; }
+    .image-container { position: relative; display: inline-block; box-shadow: 0 0 30px rgba(0,0,0,0.8); }
+    .base-img { max-width: 100%; max-height: calc(100vh - 130px); display: block; object-fit: contain; }
+
+    /* 底圖懸浮控制列 */
+    .base-img-toolbar { position: absolute; top: 12px; left: 12px; display: flex; gap: 8px; z-index: 20; background: rgba(15, 23, 36, 0.85); padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border-color); backdrop-filter: blur(8px); }
+    .base-img-toolbar button { font-size: 12px; padding: 4px 8px; }
+
+    /* Hotspots */
+    .hotspot { position: absolute; width: 30px; height: 30px; transform: translate(-50%, -50%); border-radius: 50%; cursor: pointer; z-index: 5; transition: transform 0.2s; }
+    .hotspot::before { content: ''; position: absolute; width: 100%; height: 100%; border-radius: 50%; background: var(--accent-cyan); opacity: 0.85; }
+    .hotspot::after { content: ''; position: absolute; top: -6px; left: -6px; width: 42px; height: 42px; border-radius: 50%; border: 2px solid var(--accent-cyan); animation: pulse 2s infinite; }
+    .hotspot.status-red::before { background: var(--accent-red); }
+    .hotspot.status-red::after { border-color: var(--accent-red); }
+    .hotspot.status-green::before { background: var(--accent-green); }
+    .hotspot.status-green::after { border-color: var(--accent-green); }
+    .hotspot.status-yellow::before { background: var(--accent-orange); }
+    .hotspot.status-yellow::after { border-color: var(--accent-orange); }
+    .hotspot:hover { transform: translate(-50%, -50%) scale(1.25); z-index: 10; }
+    @keyframes pulse { 0% { transform: scale(0.6); opacity: 1; } 100% { transform: scale(1.3); opacity: 0; } }
+
+    /* Sidebar Editor */
+    .sidebar { width: 440px; background: var(--panel-bg); border-left: 1px solid var(--border-color); display: flex; flex-direction: column; z-index: 10; backdrop-filter: blur(10px); }
+    .sidebar-header { padding: 15px; border-bottom: 1px solid var(--border-color); font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
+    .sidebar-content { padding: 15px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 14px; }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-group label { font-size: 12px; color: var(--text-muted); font-weight: bold; }
+    
+    .photo-preview-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 6px; }
+    .thumb-wrap { position: relative; width: 100%; height: 120px; border-radius: 6px; overflow: hidden; border: 1px solid var(--border-color); cursor: pointer; }
+    .thumb-wrap img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.2s; }
+    .thumb-wrap:hover img { transform: scale(1.05); }
+    .thumb-wrap .del-btn { position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.8); color: #fff; border: none; border-radius: 50%; width: 22px; height: 22px; font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 2; }
+
+    /* 外連排版 */
+    .ext-link-card { background: #121924; border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; display: flex; flex-direction: column; gap: 6px; }
+    .ext-link-card .ext-label { font-size: 12px; color: #a0b3c6; font-weight: bold; }
+    .ext-link-row { display: flex; gap: 6px; }
+    .ext-link-row input { flex: 1; }
+    .ext-test-btn { background: #1e2c3f; border: 1px solid var(--accent-cyan); color: var(--accent-cyan); padding: 6px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; white-space: nowrap; }
+    .ext-test-btn:hover { background: var(--accent-cyan); color: #000; }
+
+    /* Hover Inspection Card */
+    .hover-card { position: absolute; background: rgba(13, 20, 32, 0.98); border: 1.5px solid var(--accent-cyan); border-radius: 12px; padding: 18px; width: 500px; pointer-events: auto; z-index: 50; display: none; backdrop-filter: blur(14px); box-shadow: 0 20px 45px rgba(0,0,0,0.8); }
+    .hover-slider-wrap { position: relative; width: 100%; height: 300px; border-radius: 8px; overflow: hidden; margin-bottom: 14px; border: 1px solid var(--border-color); background: #000; }
+    .hover-slider-wrap img { width: 100%; height: 100%; object-fit: contain; }
+    .slider-nav-btn { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.65); color: #fff; border: none; font-size: 18px; width: 34px; height: 34px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 3; transition: all 0.2s; }
+    .slider-nav-btn:hover { background: var(--accent-cyan); color: #000; }
+    .slider-nav-btn.prev { left: 8px; }
+    .slider-nav-btn.next { right: 8px; }
+    .slider-counter { position: absolute; bottom: 8px; right: 10px; background: rgba(0,0,0,0.7); color: #fff; font-size: 11px; padding: 2px 8px; border-radius: 10px; z-index: 3; }
+
+    .hover-card .stock-tag { display: inline-block; padding: 4px 12px; border-radius: 4px; font-size: 13px; font-weight: bold; background: #004d40; color: #a7ffeb; margin-bottom: 10px; }
+    .hover-card .stock-tag.out { background: #5a1a1a; color: #ff8a80; }
+    .hover-card .category-badge { display: inline-block; padding: 3px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; margin-left: 8px; margin-bottom: 10px; }
+    .category-badge.badge-red { background: rgba(255, 61, 0, 0.2); color: var(--accent-red); border: 1px solid var(--accent-red); }
+    .category-badge.badge-green { background: rgba(0, 230, 118, 0.2); color: var(--accent-green); border: 1px solid var(--accent-green); }
+    .category-badge.badge-yellow { background: rgba(255, 145, 0, 0.2); color: var(--accent-orange); border: 1px solid var(--accent-orange); }
+
+    .hover-row { display: flex; justify-content: space-between; font-size: 15px; margin-bottom: 6px; }
+    .hover-row .label { color: var(--text-muted); }
+
+    .card-links-group { display: flex; gap: 8px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border-color); flex-wrap: wrap; }
+    .card-ext-btn { display: inline-flex; align-items: center; gap: 5px; background: #162438; border: 1px solid var(--accent-cyan); color: var(--accent-cyan); text-decoration: none; padding: 6px 12px; border-radius: 4px; font-size: 13px; font-weight: bold; transition: all 0.2s; cursor: pointer; }
+    .card-ext-btn:hover { background: var(--accent-cyan); color: #000; }
+
+    /* Tabs */
+    .view-tabs { display: flex; gap: 6px; padding: 8px 20px; background: #0c1017; border-bottom: 1px solid var(--border-color); align-items: center; }
+    .tab { padding: 6px 14px; border-radius: 4px; background: #141c28; border: 1px solid var(--border-color); font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+    .tab.active { background: #004466; border-color: var(--accent-cyan); color: #fff; font-weight: bold; }
+    .tab-del-btn { color: #ff8a80; cursor: pointer; font-size: 12px; border-radius: 50%; padding: 0 4px; }
+    .tab-del-btn:hover { background: rgba(255, 61, 0, 0.3); }
+
+    /* Lightbox Modal */
+    .lightbox-modal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.94); z-index: 999; justify-content: center; align-items: center; }
+    .lightbox-modal img { max-width: 96vw; max-height: 94vh; border-radius: 8px; box-shadow: 0 0 45px rgba(0,210,255,0.4); object-fit: contain; }
+    .lightbox-btn { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(20,30,45,0.85); color: #fff; border: 1px solid var(--border-color); font-size: 26px; width: 56px; height: 56px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; z-index: 1000; }
+    .lightbox-btn:hover { background: var(--accent-cyan); color: #000; }
+    .lightbox-btn.prev { left: 24px; }
+    .lightbox-btn.next { right: 24px; }
+    .lightbox-close { position: absolute; top: 20px; right: 24px; font-size: 32px; color: #fff; cursor: pointer; background: transparent; border: none; z-index: 1000; line-height: 1; }
+    .lightbox-counter { position: absolute; bottom: 20px; font-size: 14px; background: rgba(0,0,0,0.7); color: #00d2ff; padding: 4px 14px; border-radius: 20px; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="nav-selectors">
+      <label>廠牌:</label>
+      <select id="brandSelect" onchange="switchBrand()"></select>
+      <button onclick="addBrand()">➕ 廠牌</button>
+      
+      <label style="margin-left: 8px;">車型:</label>
+      <select id="modelSelect" onchange="switchModel()"></select>
+      <button onclick="addModel()">➕ 車型</button>
+    </div>
+    <div style="display:flex; align-items:center; gap:8px;">
+      <span id="syncStatus" style="font-size: 13px; color: var(--accent-cyan); font-weight:bold;">● 讀取記憶庫中...</span>
+      <button class="primary" onclick="document.getElementById('inventoryFileInput').click()">📂 載入/更新庫存表</button>
+      <input type="file" id="inventoryFileInput" accept=".xlsx, .xls, .csv" style="display:none" onchange="loadLocalInventoryFile(event)">
+      <button onclick="exportData()">💾 匯出備份</button>
+      <button onclick="document.getElementById('importFile').click()">📂 匯入備份</button>
+      <input type="file" id="importFile" style="display:none" onchange="importData(event)">
+      <button class="danger" onclick="clearAllData()" style="font-size:12px;">🗑️ 清空重置</button>
+    </div>
+  </header>
+
+  <div class="view-tabs" id="viewTabsContainer"></div>
+
+  <div class="workspace">
+    <div class="viewport" id="viewport">
+      
+      <div class="base-img-toolbar" id="baseImgToolbar" style="display:none;">
+        <button onclick="document.getElementById('baseImgInput').click()">🔄 更換底圖</button>
+        <button class="danger" onclick="deleteBaseImage()">🗑️ 刪除底圖</button>
+      </div>
+
+      <div class="image-container" id="imageContainer">
+        <img id="baseImage" class="base-img" src="" alt="請上傳底圖" style="display:none;">
+        <div id="noImagePrompt" style="padding: 50px; border: 2px dashed var(--border-color); text-align: center; border-radius: 8px;">
+          <p style="margin-bottom: 14px; color: var(--text-muted); font-size: 15px;">尚未上傳此部位底圖</p>
+          <button class="primary" onclick="document.getElementById('baseImgInput').click()">上傳部位底圖</button>
+        </div>
+      </div>
+      <input type="file" id="baseImgInput" accept="image/*" style="display:none" onchange="uploadBaseImage(event)">
+    </div>
+
+    <!-- Hover Card -->
+    <div class="hover-card" id="hoverCard" onmouseleave="hideHoverCard()">
+      <div class="hover-slider-wrap" id="hoverSliderWrap" style="display:none;">
+        <img id="cardImg" src="">
+        <button class="slider-nav-btn prev" onclick="prevCardPhoto(event)">◀</button>
+        <button class="slider-nav-btn next" onclick="nextCardPhoto(event)">▶</button>
+        <div class="slider-counter" id="cardPhotoCounter">1 / 1</div>
+      </div>
+      <div>
+        <div id="cardStockTag" class="stock-tag">庫存充足</div>
+        <div id="cardCategoryBadge" class="category-badge badge-red">銷售估價</div>
+      </div>
+      <h3 id="cardPartName" style="margin-bottom: 8px; color: var(--accent-cyan); font-size: 19px;">零件名稱</h3>
+      <div class="hover-row"><span class="label">零件料號:</span><span id="cardPartNo" style="font-family: monospace; font-size:16px; font-weight:bold;">--</span></div>
+      <div class="hover-row"><span class="label">層架儲位:</span><span id="cardRack" style="color:#ffd54f; font-weight:bold; font-size:16px;">--</span></div>
+      <div class="hover-row"><span class="label">在庫數量:</span><span id="cardQty" style="font-weight:bold; font-size:16px;">--</span></div>
+      <div class="hover-row"><span class="label">建議售價:</span><span id="cardPrice" style="color:#81c784; font-weight:bold; font-size:16px;">--</span></div>
+      <p id="cardNotes" style="font-size: 14px; color: var(--text-muted); margin-top: 12px; border-top: 1px solid var(--border-color); padding-top: 10px; line-height: 1.5;"></p>
+      
+      <div class="card-links-group" id="cardLinksGroup" style="display:none;">
+        <a id="cardExtBtn1" class="card-ext-btn" target="_blank" style="display:none;">🎥 診斷/拆裝影片</a>
+        <a id="cardExtBtn2" class="card-ext-btn" target="_blank" style="display:none;">📄 手冊/電路圖 PDF</a>
+        <a id="cardExtBtn3" class="card-ext-btn" target="_blank" style="display:none;">🌐 零件規格資訊</a>
+      </div>
+    </div>
+
+    <!-- Sidebar Detail Editor -->
+    <div class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <span id="editorTitle">零件熱點編輯</span>
+        <button class="danger" id="deleteHotspotBtn" onclick="deleteCurrentHotspot()" style="display:none;">刪除熱點</button>
+      </div>
+      <div class="sidebar-content" id="editorForm" style="display:none;">
+        <div class="form-group">
+          <label>維修與銷售屬性</label>
+          <select id="inputStatus" onchange="updateHotspotVisual()">
+            <option value="status-red">🔴 銷售估價 (損壞更換 / 主動報價)</option>
+            <option value="status-green">🟢 定期更換 (例行保養 / 固定更換)</option>
+            <option value="status-yellow">🟡 預防性更換 (老化預警 / 提早更換)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>綁定零件代號 (輸入即自動比對)</label>
+          <input type="text" id="inputPartNo" placeholder="如: 1611909180" oninput="matchInventory()" style="font-family:monospace; font-size:15px; font-weight:bold;">
+        </div>
+        <div class="form-group">
+          <label>零件名稱 (自動抓取 / 可自訂)</label>
+          <input type="text" id="inputPartName" placeholder="如: 雨刷清潔液（1Ｌ）">
+        </div>
+        <div class="form-group">
+          <label>即時庫存資訊</label>
+          <div style="background:#101722; padding:12px; border-radius:6px; font-size:14px; border:1px solid var(--border-color); display:flex; flex-direction:column; gap:8px;">
+            <div style="display:flex; justify-content:space-between;"><span>層架儲位:</span><b id="dispRack" style="color:#ffd54f; font-size:16px;">--</b></div>
+            <div style="display:flex; justify-content:space-between;"><span>目前在庫:</span><b id="dispQty" style="font-size:16px;">--</b></div>
+            <div style="display:flex; justify-content:space-between;"><span>建議訂價:</span><b id="dispPrice" style="color:#81c784; font-size:16px;">--</b></div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>技師檢測備註</label>
+          <textarea id="inputNotes" rows="3" style="background:#1a2332; border:1px solid var(--border-color); color:#fff; border-radius:4px; padding:8px; font-size:14px;"></textarea>
+        </div>
+        <div class="form-group">
+          <label>特寫細節照片 (點擊任一張可全螢幕切換瀏覽)</label>
+          <button onclick="document.getElementById('photoInput').click()">➕ 新增特寫照片</button>
+          <input type="file" id="photoInput" accept="image/*" multiple style="display:none" onchange="uploadDetailPhotos(event)">
+          <div class="photo-preview-grid" id="photoGrid"></div>
+        </div>
+
+        <div class="form-group" style="border-top: 1px solid var(--border-color); padding-top: 10px; display: flex; flex-direction: column; gap: 10px;">
+          <label style="color: var(--accent-cyan); font-size: 13px;">🔗 延伸多媒體與技術外連 (選填)</label>
+          
+          <div class="ext-link-card">
+            <span class="ext-label">1. 🎥 診斷 / 拆裝影片網址</span>
+            <div class="ext-link-row">
+              <input type="text" id="inputExtUrl1" placeholder="https://..." oninput="handleExtUrlInput(1)">
+              <button class="ext-test-btn" onclick="testOpenUrl(1)">🌐 開啟測試</button>
+            </div>
+          </div>
+
+          <div class="ext-link-card">
+            <span class="ext-label">2. 📄 維修手冊 / 電路圖 PDF 網址</span>
+            <div class="ext-link-row">
+              <input type="text" id="inputExtUrl2" placeholder="https://..." oninput="handleExtUrlInput(2)">
+              <button class="ext-test-btn" onclick="testOpenUrl(2)">🌐 開啟測試</button>
+            </div>
+          </div>
+
+          <div class="ext-link-card">
+            <span class="ext-label">3. 🌐 零件規格 / 外部連結網址</span>
+            <div class="ext-link-row">
+              <input type="text" id="inputExtUrl3" placeholder="https://..." oninput="handleExtUrlInput(3)">
+              <button class="ext-test-btn" onclick="testOpenUrl(3)">🌐 開啟測試</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lightbox Modal -->
+  <div class="lightbox-modal" id="lightboxModal">
+    <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+    <button class="lightbox-btn prev" onclick="prevLightboxPhoto()">◀</button>
+    <img id="lightboxImg" src="">
+    <button class="lightbox-btn next" onclick="nextLightboxPhoto()">▶</button>
+    <div class="lightbox-counter" id="lightboxCounter">第 1 / 1 張</div>
+  </div>
+
+  <script>
+    const ADMIN_PIN = "0000"; // 預設管理員刪除密碼
+
+    function verifyAdminPIN(actionName) {
+      const input = prompt(`【管理員安全驗證】\n請輸入 4 位數密碼以執行「${actionName}」:`);
+      if (input === null) return false;
+      if (input === ADMIN_PIN) {
+        return true;
+      } else {
+        alert("❌ 密碼錯誤，操作已取消！");
+        return false;
+      }
+    }
+
+    const DB_NAME = "AutoInspectionDB_v2";
+    const DB_VERSION = 1;
+    let db;
+
+    function openDB() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, DB_VERSION);
+        req.onupgradeneeded = (e) => {
+          const d = e.target.result;
+          if (!d.objectStoreNames.contains('store')) d.createObjectStore('store');
+        };
+        req.onsuccess = () => { db = req.result; resolve(db); };
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    function dbSet(key, val) {
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction('store', 'readwrite');
+        tx.objectStore('store').put(val, key);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+
+    function dbGet(key) {
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction('store', 'readonly');
+        const req = tx.objectStore('store').get(key);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    let inventoryDB = {};
+    
+    let defaultAppData = {
+      brands: [
+        {
+          name: "PEUGEOT",
+          models: [
+            {
+              name: "408 Hybrid",
+              views: [
+                { name: "引擎室全景", baseImg: "", hotspots: [] },
+                { name: "後底盤與高壓電池", baseImg: "", hotspots: [] }
+              ]
+            }
+          ]
+        },
+        {
+          name: "CITROEN",
+          models: [
+            {
+              name: "Berlingo",
+              views: [
+                { name: "引擎室全景", baseImg: "", hotspots: [] },
+                { name: "前懸吊轉向", baseImg: "", hotspots: [] }
+              ]
+            }
+          ]
+        },
+        {
+          name: "ALFA",
+          models: [
+            {
+              name: "GIULIA / STELVIO",
+              views: [
+                { name: "引擎室全景", baseImg: "", hotspots: [] },
+                { name: "底盤傳動", baseImg: "", hotspots: [] }
+              ]
+            }
+          ]
+        },
+        {
+          name: "JEEP",
+          models: [
+            {
+              name: "Wrangler / Renegade",
+              views: [
+                { name: "引擎室全景", baseImg: "", hotspots: [] },
+                { name: "四驅底盤", baseImg: "", hotspots: [] }
+              ]
+            }
+          ]
+        }
+      ]
+    };
+    
+    let appData = JSON.parse(JSON.stringify(defaultAppData));
+    let curBrandIdx = 0, curModelIdx = 0, curViewIdx = 0;
+    let selectedHotspot = null;
+
+    let activePhotos = [];
+    let currentPhotoIdx = 0;
+
+    let hoverHotspot = null;
+    let hoverPhotoIdx = 0;
+
+    async function autoSave() {
+      if (!db) return;
+      await dbSet('app_data', appData);
+    }
+
+    function getUniqueInventoryCount() {
+      return new Set(Object.values(inventoryDB).map(item => item.rawPartNo)).size;
+    }
+
+    function loadLocalInventoryFile(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      const statusEl = document.getElementById('syncStatus');
+      statusEl.innerText = `● 正在解析 ${file.name}...`;
+
+      reader.onload = async function(evt) {
+        try {
+          const data = new Uint8Array(evt.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const firstSheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[firstSheetName];
+          const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+          let headerRow = 17;
+          for (let i = 0; i < Math.min(25, rows.length); i++) {
+            if (rows[i] && rows[i].some(col => String(col).includes('零件代號'))) {
+              headerRow = i;
+              break;
+            }
+          }
+
+          inventoryDB = {};
+          for (let i = headerRow + 1; i < rows.length; i++) {
+            const row = rows[i];
+            if (!row || row.length < 7) continue;
+
+            const rawPartNo = String(row[3] || '').trim();
+            if (!rawPartNo) continue;
+
+            const item = {
+              rawPartNo: rawPartNo,
+              name: String(row[4] || '').trim(),
+              spec: String(row[5] || '').trim(),
+              rack: String(row[6] || '').trim() || '未設定',
+              qty: parseInt(row[9]) || 0,
+              price: String(row[22] || '0').trim()
+            };
+
+            const cleanKey = rawPartNo.replace(/^0+/, '');
+            inventoryDB[rawPartNo] = item;
+            inventoryDB[cleanKey] = item;
+          }
+
+          await dbSet('inventory_db', inventoryDB);
+
+          const count = getUniqueInventoryCount();
+          statusEl.innerText = `● 庫存已永久記憶 (${count} 筆)`;
+          statusEl.style.color = "var(--accent-green)";
+
+          if (selectedHotspot) matchInventory();
+        } catch (err) {
+          statusEl.innerText = `▲ 解析失敗，請確認格式`;
+          statusEl.style.color = "var(--accent-red)";
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    async function init() {
+      await openDB();
+      const statusEl = document.getElementById('syncStatus');
+
+      const savedInv = await dbGet('inventory_db');
+      if (savedInv) {
+        inventoryDB = savedInv;
+        const count = getUniqueInventoryCount();
+        statusEl.innerText = `● 庫存記憶已就緒 (${count} 筆)`;
+        statusEl.style.color = "var(--accent-green)";
+      } else {
+        statusEl.innerText = `○ 請載入庫存表一次 (自動記憶)`;
+      }
+
+      const savedApp = await dbGet('app_data');
+      if (savedApp && savedApp.brands && savedApp.brands.length >= 4) {
+        appData = savedApp;
+      } else {
+        appData = JSON.parse(JSON.stringify(defaultAppData));
+        await autoSave();
+      }
+
+      renderBrandSelect();
+      renderModelSelect();
+      renderTabs();
+      loadCurrentView();
+
+      document.getElementById('imageContainer').addEventListener('click', (e) => {
+        if (e.target.classList.contains('hotspot') || !getCurrentView().baseImg) return;
+        const rect = e.currentTarget.getBoundingClientRect();
+        const x = ((e.clientX - rect.left) / rect.width * 100).toFixed(2);
+        const y = ((e.clientY - rect.top) / rect.height * 100).toFixed(2);
+        
+        const newHotspot = {
+          id: 'hs_' + Date.now(),
+          x: parseFloat(x),
+          y: parseFloat(y),
+          partNo: '',
+          partName: '新零件項目',
+          status: 'status-red',
+          notes: '',
+          photos: [],
+          extUrl1: '',
+          extUrl2: '',
+          extUrl3: ''
+        };
+        getCurrentView().hotspots.push(newHotspot);
+        autoSave();
+        renderHotspots();
+        selectHotspot(newHotspot);
+      });
+
+      window.addEventListener('keydown', (e) => {
+        if (document.getElementById('lightboxModal').style.display === 'flex') {
+          if (e.key === 'ArrowLeft') prevLightboxPhoto();
+          if (e.key === 'ArrowRight') nextLightboxPhoto();
+          if (e.key === 'Escape') closeLightbox();
+        }
+      });
+    }
+
+    function getCurrentView() { return appData.brands[curBrandIdx].models[curModelIdx].views[curViewIdx]; }
+
+    function renderBrandSelect() {
+      const sel = document.getElementById('brandSelect');
+      sel.innerHTML = appData.brands.map((b, i) => `<option value="${i}">${b.name}</option>`).join('');
+      sel.value = curBrandIdx;
+    }
+
+    function renderModelSelect() {
+      const sel = document.getElementById('modelSelect');
+      sel.innerHTML = appData.brands[curBrandIdx].models.map((m, i) => `<option value="${i}">${m.name}</option>`).join('');
+      sel.value = curModelIdx;
+    }
+
+    function renderTabs() {
+      const container = document.getElementById('viewTabsContainer');
+      const views = appData.brands[curBrandIdx].models[curModelIdx].views;
+      container.innerHTML = views.map((v, i) => `
+        <div class="tab ${i === curViewIdx ? 'active' : ''}" onclick="switchView(${i})">
+          <span>${v.name}</span>
+          ${views.length > 1 ? `<span class="tab-del-btn" onclick="event.stopPropagation(); deleteView(${i})">✕</span>` : ''}
+        </div>
+      `).join('') + `<button onclick="addView()" style="padding:4px 8px; font-size:12px;">➕ 新增視角</button>`;
+    }
+
+    function switchBrand() { curBrandIdx = parseInt(document.getElementById('brandSelect').value); curModelIdx = 0; curViewIdx = 0; renderModelSelect(); renderTabs(); loadCurrentView(); }
+    function switchModel() { curModelIdx = parseInt(document.getElementById('modelSelect').value); curViewIdx = 0; renderTabs(); loadCurrentView(); }
+    function switchView(i) { curViewIdx = i; renderTabs(); loadCurrentView(); }
+
+    function addBrand() {
+      const name = prompt("請輸入新廠牌名稱:");
+      if (name) { 
+        appData.brands.push({ name, models: [{ name: "預設車型", views: [{ name: "引擎室全景", baseImg: "", hotspots: [] }] }] }); 
+        curBrandIdx = appData.brands.length - 1; curModelIdx = 0; curViewIdx = 0; 
+        autoSave();
+        renderBrandSelect(); renderModelSelect(); renderTabs(); loadCurrentView(); 
+      }
+    }
+
+    function addModel() {
+      const name = prompt("請輸入新車型名稱:");
+      if (name) { 
+        appData.brands[curBrandIdx].models.push({ name, views: [{ name: "引擎室全景", baseImg: "", hotspots: [] }] }); 
+        curModelIdx = appData.brands[curBrandIdx].models.length - 1; curViewIdx = 0; 
+        autoSave();
+        renderModelSelect(); renderTabs(); loadCurrentView(); 
+      }
+    }
+
+    function addView() {
+      const name = prompt("請輸入部位視角名稱 (如: 後底盤與電控):");
+      if (name) { 
+        appData.brands[curBrandIdx].models[curModelIdx].views.push({ name, baseImg: "", hotspots: [] }); 
+        curViewIdx = appData.brands[curBrandIdx].models[curModelIdx].views.length - 1; 
+        autoSave();
+        renderTabs(); loadCurrentView(); 
+      }
+    }
+
+    function deleteView(i) {
+      const views = appData.brands[curBrandIdx].models[curModelIdx].views;
+      if (!verifyAdminPIN(`刪除「${views[i].name}」部位視角`)) return;
+      views.splice(i, 1);
+      curViewIdx = Math.max(0, curViewIdx - 1);
+      autoSave();
+      renderTabs();
+      loadCurrentView();
+    }
+
+    function loadCurrentView() {
+      const v = getCurrentView();
+      const img = document.getElementById('baseImage');
+      const promptBox = document.getElementById('noImagePrompt');
+      const toolbar = document.getElementById('baseImgToolbar');
+      
+      if (v.baseImg) {
+        img.src = v.baseImg;
+        img.style.display = 'block';
+        promptBox.style.display = 'none';
+        toolbar.style.display = 'flex';
+      } else {
+        img.style.display = 'none';
+        promptBox.style.display = 'block';
+        toolbar.style.display = 'none';
+      }
+      deselectHotspot();
+      renderHotspots();
+    }
+
+    function uploadBaseImage(e) {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (evt) => { 
+          getCurrentView().baseImg = evt.target.result; 
+          autoSave();
+          loadCurrentView(); 
+        };
+        reader.readAsDataURL(file);
+      }
+      e.target.value = '';
+    }
+
+    function deleteBaseImage() {
+      if (!verifyAdminPIN("刪除此張底圖")) return;
+      const v = getCurrentView();
+      v.baseImg = "";
+      autoSave();
+      loadCurrentView();
+    }
+
+    function renderHotspots() {
+      document.querySelectorAll('.hotspot').forEach(el => el.remove());
+      const v = getCurrentView();
+      const container = document.getElementById('imageContainer');
+
+      v.hotspots.forEach(hs => {
+        const el = document.createElement('div');
+        el.className = `hotspot ${hs.status || 'status-red'}`;
+        el.style.left = `${hs.x}%`;
+        el.style.top = `${hs.y}%`;
+        
+        el.addEventListener('mouseenter', (e) => showHoverCard(hs, e));
+        el.addEventListener('click', (e) => { e.stopPropagation(); selectHotspot(hs); });
+
+        container.appendChild(el);
+      });
+    }
+
+    function selectHotspot(hs) {
+      selectedHotspot = hs;
+      document.getElementById('editorForm').style.display = 'flex';
+      document.getElementById('deleteHotspotBtn').style.display = 'block';
+      document.getElementById('inputStatus').value = hs.status || 'status-red';
+      document.getElementById('inputPartNo').value = hs.partNo || '';
+      document.getElementById('inputPartName').value = hs.partName || '';
+      document.getElementById('inputNotes').value = hs.notes || '';
+      
+      document.getElementById('inputExtUrl1').value = hs.extUrl1 || '';
+      document.getElementById('inputExtUrl2').value = hs.extUrl2 || '';
+      document.getElementById('inputExtUrl3').value = hs.extUrl3 || '';
+      
+      matchInventory();
+      renderPhotoGrid();
+      
+      document.getElementById('inputPartName').oninput = (e) => { hs.partName = e.target.value; autoSave(); };
+      document.getElementById('inputNotes').oninput = (e) => { hs.notes = e.target.value; autoSave(); };
+    }
+
+    function handleExtUrlInput(num) {
+      if (!selectedHotspot) return;
+      const val = document.getElementById(`inputExtUrl${num}`).value.trim();
+      selectedHotspot[`extUrl${num}`] = val;
+      autoSave();
+    }
+
+    function testOpenUrl(num) {
+      let val = document.getElementById(`inputExtUrl${num}`).value.trim();
+      if (!val) {
+        alert("請先輸入網址！");
+        return;
+      }
+      if (!val.startsWith('http://') && !val.startsWith('https://')) {
+        val = 'https://' + val;
+      }
+      window.open(val, '_blank');
+    }
+
+    function deselectHotspot() {
+      selectedHotspot = null;
+      document.getElementById('editorForm').style.display = 'none';
+      document.getElementById('deleteHotspotBtn').style.display = 'none';
+    }
+
+    function updateHotspotVisual() {
+      if (selectedHotspot) {
+        selectedHotspot.status = document.getElementById('inputStatus').value;
+        autoSave();
+        renderHotspots();
+      }
+    }
+
+    function matchInventory() {
+      if (!selectedHotspot) return;
+      const rawInput = document.getElementById('inputPartNo').value.trim();
+      selectedHotspot.partNo = rawInput;
+      autoSave();
+
+      const cleanKey = rawInput.replace(/^0+/, '');
+      const match = inventoryDB[rawInput] || inventoryDB[cleanKey];
+
+      if (match) {
+        document.getElementById('dispRack').innerText = match.rack;
+        document.getElementById('dispQty').innerText = `${match.qty} 個`;
+        document.getElementById('dispPrice').innerText = `$${match.price}`;
+        if (!document.getElementById('inputPartName').value || document.getElementById('inputPartName').value === '新零件項目') {
+          document.getElementById('inputPartName').value = match.name;
+          selectedHotspot.partName = match.name;
+          autoSave();
+        }
+      } else {
+        document.getElementById('dispRack').innerText = '--';
+        document.getElementById('dispQty').innerText = '--';
+        document.getElementById('dispPrice').innerText = '--';
+      }
+    }
+
+    function uploadDetailPhotos(e) {
+      const files = Array.from(e.target.files);
+      files.forEach(f => {
+        const r = new FileReader();
+        r.onload = (evt) => {
+          selectedHotspot.photos.push(evt.target.result);
+          autoSave();
+          renderPhotoGrid();
+        };
+        r.readAsDataURL(f);
+      });
+    }
+
+    function renderPhotoGrid() {
+      const grid = document.getElementById('photoGrid');
+      grid.innerHTML = selectedHotspot.photos.map((p, i) => `
+        <div class="thumb-wrap" onclick="openLightbox(${i})">
+          <img src="${p}">
+          <button class="del-btn" onclick="event.stopPropagation(); removePhoto(${i})">✕</button>
+        </div>
+      `).join('');
+    }
+
+    // --- Lightbox Functions ---
+    function openLightbox(idx) {
+      activePhotos = selectedHotspot ? selectedHotspot.photos : (hoverHotspot ? hoverHotspot.photos : []);
+      if (!activePhotos || activePhotos.length === 0) return;
+      currentPhotoIdx = idx;
+      updateLightboxView();
+      document.getElementById('lightboxModal').style.display = 'flex';
+    }
+
+    function updateLightboxView() {
+      document.getElementById('lightboxImg').src = activePhotos[currentPhotoIdx];
+      document.getElementById('lightboxCounter').innerText = `第 ${currentPhotoIdx + 1} / ${activePhotos.length} 張`;
+    }
+
+    function prevLightboxPhoto() {
+      if (activePhotos.length <= 1) return;
+      currentPhotoIdx = (currentPhotoIdx - 1 + activePhotos.length) % activePhotos.length;
+      updateLightboxView();
+    }
+
+    function nextLightboxPhoto() {
+      if (activePhotos.length <= 1) return;
+      currentPhotoIdx = (currentPhotoIdx + 1) % activePhotos.length;
+      updateLightboxView();
+    }
+
+    function closeLightbox() {
+      document.getElementById('lightboxModal').style.display = 'none';
+    }
+
+    function removePhoto(i) {
+      if (!verifyAdminPIN("刪除此張特寫照片")) return;
+      selectedHotspot.photos.splice(i, 1);
+      autoSave();
+      renderPhotoGrid();
+    }
+
+    function deleteCurrentHotspot() {
+      if (!selectedHotspot) return;
+      if (!verifyAdminPIN(`刪除零件熱點「${selectedHotspot.partName || '未命名'}」`)) return;
+      const v = getCurrentView();
+      v.hotspots = v.hotspots.filter(h => h.id !== selectedHotspot.id);
+      deselectHotspot();
+      autoSave();
+      renderHotspots();
+    }
+
+    // --- Hover Card Functions ---
+    function showHoverCard(hs, e) {
+      hoverHotspot = hs;
+      hoverPhotoIdx = 0;
+      const card = document.getElementById('hoverCard');
+      const cleanKey = (hs.partNo || '').trim().replace(/^0+/, '');
+      const inv = inventoryDB[hs.partNo] || inventoryDB[cleanKey] || {};
+
+      document.getElementById('cardPartName').innerText = hs.partName || inv.name || '未命名零件';
+      document.getElementById('cardPartNo').innerText = hs.partNo || '未填寫';
+      document.getElementById('cardRack').innerText = inv.rack || '--';
+      document.getElementById('cardQty').innerText = inv.qty !== undefined ? `${inv.qty} 個` : '--';
+      document.getElementById('cardPrice').innerText = inv.price ? `$${inv.price}` : '--';
+      document.getElementById('cardNotes').innerText = hs.notes ? `技師備註: ${hs.notes}` : '暫無特別備註';
+
+      const tag = document.getElementById('cardStockTag');
+      if (inv.qty > 0) {
+        tag.className = 'stock-tag';
+        tag.innerText = `庫存現貨: ${inv.qty}`;
+      } else {
+        tag.className = 'stock-tag out';
+        tag.innerText = '目前無庫存 (需叫料)';
+      }
+
+      const catBadge = document.getElementById('cardCategoryBadge');
+      if (hs.status === 'status-green') {
+        catBadge.className = 'category-badge badge-green';
+        catBadge.innerText = '🟢 定期更換';
+      } else if (hs.status === 'status-yellow') {
+        catBadge.className = 'category-badge badge-yellow';
+        catBadge.innerText = '🟡 預防性更換';
+      } else {
+        catBadge.className = 'category-badge badge-red';
+        catBadge.innerText = '🔴 銷售估價';
+      }
+
+      updateCardPhotoDisplay();
+
+      const linksGroup = document.getElementById('cardLinksGroup');
+      const btn1 = document.getElementById('cardExtBtn1');
+      const btn2 = document.getElementById('cardExtBtn2');
+      const btn3 = document.getElementById('cardExtBtn3');
+      
+      let hasAnyLink = false;
+
+      function formatUrl(u) {
+        if (!u) return '';
+        u = u.trim();
+        return (u.startsWith('http://') || u.startsWith('https://')) ? u : 'https://' + u;
+      }
+
+      if (hs.extUrl1 && hs.extUrl1.trim()) {
+        btn1.href = formatUrl(hs.extUrl1);
+        btn1.style.display = 'inline-flex';
+        hasAnyLink = true;
+      } else { btn1.style.display = 'none'; }
+
+      if (hs.extUrl2 && hs.extUrl2.trim()) {
+        btn2.href = formatUrl(hs.extUrl2);
+        btn2.style.display = 'inline-flex';
+        hasAnyLink = true;
+      } else { btn2.style.display = 'none'; }
+
+      if (hs.extUrl3 && hs.extUrl3.trim()) {
+        btn3.href = formatUrl(hs.extUrl3);
+        btn3.style.display = 'inline-flex';
+        hasAnyLink = true;
+      } else { btn3.style.display = 'none'; }
+
+      linksGroup.style.display = hasAnyLink ? 'flex' : 'none';
+
+      card.style.display = 'block';
+      card.style.left = `${e.clientX + 20}px`;
+      card.style.top = `${Math.min(e.clientY - 40, window.innerHeight - 600)}px`;
+    }
+
+    function updateCardPhotoDisplay() {
+      const wrap = document.getElementById('hoverSliderWrap');
+      if (hoverHotspot && hoverHotspot.photos && hoverHotspot.photos.length > 0) {
+        wrap.style.display = 'block';
+        document.getElementById('cardImg').src = hoverHotspot.photos[hoverPhotoIdx];
+        document.getElementById('cardPhotoCounter').innerText = `${hoverPhotoIdx + 1} / ${hoverHotspot.photos.length}`;
+      } else {
+        wrap.style.display = 'none';
+      }
+    }
+
+    function prevCardPhoto(e) {
+      e.stopPropagation();
+      if (!hoverHotspot || hoverHotspot.photos.length <= 1) return;
+      hoverPhotoIdx = (hoverPhotoIdx - 1 + hoverHotspot.photos.length) % hoverHotspot.photos.length;
+      updateCardPhotoDisplay();
+    }
+
+    function nextCardPhoto(e) {
+      e.stopPropagation();
+      if (!hoverHotspot || hoverHotspot.photos.length <= 1) return;
+      hoverPhotoIdx = (hoverPhotoIdx + 1) % hoverHotspot.photos.length;
+      updateCardPhotoDisplay();
+    }
+
+    function hideHoverCard() {
+      document.getElementById('hoverCard').style.display = 'none';
+    }
+
+    function exportData() {
+      const blob = new Blob([JSON.stringify(appData, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `parts_inspection_backup_${new Date().toISOString().slice(0,10)}.json`;
+      a.click();
+    }
+
+    function importData(e) {
+      const file = e.target.files[0];
+      if (file) {
+        const r = new FileReader();
+        r.onload = async (evt) => {
+          appData = JSON.parse(evt.target.result);
+          await autoSave();
+          curBrandIdx = 0; curModelIdx = 0; curViewIdx = 0;
+          renderBrandSelect(); renderModelSelect(); renderTabs(); loadCurrentView();
+        };
+        r.readAsText(file);
+      }
+    }
+
+    async function clearAllData() {
+      if (!verifyAdminPIN("清空並重置所有車種資料與底圖")) return;
+      appData = JSON.parse(JSON.stringify(defaultAppData));
+      await autoSave();
+      curBrandIdx = 0; curModelIdx = 0; curViewIdx = 0;
+      renderBrandSelect(); renderModelSelect(); renderTabs(); loadCurrentView();
+    }
+
+    window.onload = init;
+  </script>
+</body>
+</html>
