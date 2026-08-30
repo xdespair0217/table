@@ -72,7 +72,6 @@
     .form-group { display: flex; flex-direction: column; gap: 6px; }
     .form-group label { font-size: 12px; color: var(--text-muted); font-weight: bold; }
     
-    /* 縮圖展示與檔名標註 */
     .photo-preview-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 6px; }
     .thumb-card { display: flex; flex-direction: column; background: #121924; border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden; }
     .thumb-wrap { position: relative; width: 100%; height: 110px; cursor: pointer; background: #000; }
@@ -374,6 +373,32 @@
       }
     }
 
+    // 圖片客戶端輕量化無損壓縮 (解決手機版卡頓關鍵)
+    function compressImage(file, maxWidth = 1600, quality = 0.82) {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (e) => {
+          const img = new Image();
+          img.src = e.target.result;
+          img.onload = () => {
+            let width = img.width;
+            let height = img.height;
+            if (width > maxWidth) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL('image/jpeg', quality));
+          };
+        };
+      });
+    }
+
     function copyPurePartInfo() {
       const target = selectedHotspot || hoverHotspot;
       if (!target) return;
@@ -560,12 +585,9 @@
       return p;
     }
 
-    // 第一優先：直接讀取 Google 雲端 CSV (永遠確保最新報價)
     async function autoFetchCloudCSV() {
       const statusEl = document.getElementById('syncStatus');
       try {
-        if (statusEl) statusEl.innerText = "● 正在同步雲端報價...";
-        
         let text = "";
         try {
           const res = await fetch(CSV_URL);
@@ -618,7 +640,6 @@
       }
     }
 
-    // 第二優先備援：讀取同目錄 data02.xlsx
     async function autoFetchLocalExcel() {
       try {
         const res = await fetch(INVENTORY_EXCEL_FILE);
@@ -741,56 +762,56 @@
       reader.readAsArrayBuffer(file);
     }
 
+    // 🚀 極速平行初始化（Instant Cache First + Background Sync）
     async function init() {
       await openDB();
       const statusEl = document.getElementById('syncStatus');
 
-      // 1. 底圖與熱點資料載入 (優先讀取 data01.json)
-      let loadedFromServer = false;
-      try {
-        const res = await fetch(DATA_JSON_FILE);
-        if (res.ok) {
-          const serverData = await res.json();
-          if (serverData && serverData.brands) {
-            appData = serverData;
-            await autoSave();
-            loadedFromServer = true;
-          }
-        }
-      } catch (e) {}
-
-      if (!loadedFromServer) {
-        const savedApp = await dbGet('app_data');
-        if (savedApp && savedApp.brands && savedApp.brands.length >= 4) {
-          appData = savedApp;
-        } else {
-          appData = JSON.parse(JSON.stringify(defaultAppData));
-          await autoSave();
-        }
+      // 步驟 1：0.01 秒先從快取將畫面秒開 (不論電腦或手機立即呈現)
+      const savedApp = await dbGet('app_data');
+      if (savedApp && savedApp.brands && savedApp.brands.length > 0) {
+        appData = savedApp;
+      } else {
+        appData = JSON.parse(JSON.stringify(defaultAppData));
       }
 
-      // 2. 報價庫存載入：永遠第一優先讀取 Google 雲端 CSV
-      const cloudLoaded = await autoFetchCloudCSV();
-      if (!cloudLoaded) {
-        // 斷網備援 1：讀取本地 data02.xlsx
-        const excelLoaded = await autoFetchLocalExcel();
-        if (!excelLoaded) {
-          // 斷網備援 2：讀取瀏覽器上次記憶庫
-          const savedInv = await dbGet('inventory_db');
-          if (savedInv && Object.keys(savedInv).length > 0) {
-            inventoryDB = savedInv;
-            if (statusEl) {
-              statusEl.innerText = `● 離線快取已就緒 (${getUniqueInventoryCount()} 筆)`;
-              statusEl.style.color = "var(--accent-green)";
-            }
-          }
-        }
+      const savedInv = await dbGet('inventory_db');
+      if (savedInv && Object.keys(savedInv).length > 0) {
+        inventoryDB = savedInv;
       }
 
+      // 立即繪製畫面，零等待
       renderBrandSelect();
       renderModelSelect();
       renderTabs();
       loadCurrentView();
+
+      // 步驟 2：在背景非同步更新 data01.json (若有新打點自動靜默覆蓋)
+      fetch(DATA_JSON_FILE)
+        .then(res => res.ok ? res.json() : null)
+        .then(async (serverData) => {
+          if (serverData && serverData.brands) {
+            appData = serverData;
+            await autoSave();
+            renderBrandSelect();
+            renderModelSelect();
+            renderTabs();
+            loadCurrentView();
+          }
+        })
+        .catch(() => {});
+
+      // 步驟 3：在背景非同步更新 Google 雲端庫存
+      autoFetchCloudCSV().then(cloudOk => {
+        if (!cloudOk) {
+          autoFetchLocalExcel().then(localOk => {
+            if (!localOk && savedInv && statusEl) {
+              statusEl.innerText = `● 離線快取已就緒 (${getUniqueInventoryCount()} 筆)`;
+              statusEl.style.color = "var(--accent-green)";
+            }
+          });
+        }
+      });
 
       document.getElementById('viewport').addEventListener('click', (e) => {
         if (!e.target.closest('.hotspot') && !e.target.closest('#hoverCard')) {
@@ -990,16 +1011,14 @@
       renderHotspots();
     }
 
-    function uploadBaseImage(e) {
+    async function uploadBaseImage(e) {
       const file = e.target.files[0];
       if (file) {
-        const reader = new FileReader();
-        reader.onload = (evt) => { 
-          getCurrentView().baseImg = evt.target.result; 
-          autoSave();
-          loadCurrentView(); 
-        };
-        reader.readAsDataURL(file);
+        // 底圖自動進行高畫質輕量壓縮 (最寬 1920px)
+        const compressedBase64 = await compressImage(file, 1920, 0.85);
+        getCurrentView().baseImg = compressedBase64;
+        autoSave();
+        loadCurrentView();
       }
       e.target.value = '';
     }
@@ -1136,20 +1155,18 @@
       }
     }
 
-    function uploadDetailPhotos(e) {
+    // 特寫照片上傳時自動進行輕量壓縮
+    async function uploadDetailPhotos(e) {
       const files = Array.from(e.target.files);
-      files.forEach(f => {
-        const r = new FileReader();
-        r.onload = (evt) => {
-          selectedHotspot.photos.push({
-            src: evt.target.result,
-            name: f.name
-          });
-          autoSave();
-          renderPhotoGrid();
-        };
-        r.readAsDataURL(f);
-      });
+      for (const f of files) {
+        const compressedBase64 = await compressImage(f, 1280, 0.82);
+        selectedHotspot.photos.push({
+          src: compressedBase64,
+          name: f.name
+        });
+      }
+      autoSave();
+      renderPhotoGrid();
       e.target.value = '';
     }
 
@@ -1158,20 +1175,17 @@
       document.getElementById('replacePhotoInput').click();
     }
 
-    function executePhotoReplace(e) {
+    async function executePhotoReplace(e) {
       const file = e.target.files[0];
       if (file && replacingPhotoIndex >= 0 && selectedHotspot) {
-        const r = new FileReader();
-        r.onload = (evt) => {
-          selectedHotspot.photos[replacingPhotoIndex] = {
-            src: evt.target.result,
-            name: file.name
-          };
-          autoSave();
-          renderPhotoGrid();
-          replacingPhotoIndex = -1;
+        const compressedBase64 = await compressImage(file, 1280, 0.82);
+        selectedHotspot.photos[replacingPhotoIndex] = {
+          src: compressedBase64,
+          name: file.name
         };
-        r.readAsDataURL(file);
+        autoSave();
+        renderPhotoGrid();
+        replacingPhotoIndex = -1;
       }
       e.target.value = '';
     }
@@ -1202,7 +1216,6 @@
       }).join('');
     }
 
-    // --- Lightbox Functions ---
     function openLightbox(idx) {
       activePhotos = selectedHotspot ? selectedHotspot.photos : (hoverHotspot ? hoverHotspot.photos : []);
       if (!activePhotos || activePhotos.length === 0) return;
